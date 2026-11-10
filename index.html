@@ -356,6 +356,7 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 }
 
 /* ---------- edit mode (only visible to you) ---------- */
+#slot-location { display: inline-flex; gap: 6px; margin: 0 0 0 10px; vertical-align: middle; }
 .edit-slot:empty { display: none; }
 .edit-slot { margin-top: 14px; }
 .filter-wrap { display: inline-flex; align-items: center; }
@@ -610,7 +611,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 </section>
 
 <footer>
-  <div class="wrap"><span>Ekemini John · Windsor, ON</span><span>© <span id="year">2026</span></span></div>
+  <div class="wrap"><span>Ekemini John · <span id="footer-location">Windsor, ON</span><span class="edit-slot" id="slot-location"></span></span><span>© <span id="year">2026</span></span></div>
 </footer>
 
 
@@ -1192,6 +1193,7 @@ function normalize(d) {
     })),
     skills: arr(d.skills).map(g => ({ group: str(g.group), items: arr(g.items).map(str).filter(Boolean) })),
     intro: typeof d.intro === "string" ? d.intro : DEFAULT_DATA.intro,
+    location: typeof d.location === "string" && d.location ? d.location : "Windsor, ON",
     facts: (Array.isArray(d.facts) ? d.facts : DEFAULT_DATA.facts).map(f => ({ value: str(f.value), label: str(f.label) })),
     now: {
       eyebrow: d.now ? str(d.now.eyebrow) : DEFAULT_DATA.now.eyebrow,
@@ -1792,6 +1794,52 @@ function renderAbout() {
     ], { interests: pairsToText(a.interests, "label", "text") }, v => { a.interests = textToPairs(v.interests, "label", "text"); save(); }));
 }
 
+// ---------- footer location ----------
+function renderLocation() {
+  document.getElementById("footer-location").textContent = data.location;
+  const slot = document.getElementById("slot-location");
+  slot.textContent = "";
+  if (!canEdit) return;
+  slot.append(
+    btn("Edit", "tool", () => openForm("Footer location", [
+      { name: "location", label: "Location", required: true, hint: "City and province or country, e.g. Windsor, ON" }
+    ], { location: data.location }, v => { data.location = v.location.trim(); save(); })),
+    btn("Use my location", "tool", () => detectLocation(true))
+  );
+}
+// Ask the browser where you are, turn it into "City, ON" (or "City, Country"),
+// and only change the footer after you confirm. Runs only in edit mode.
+async function detectLocation(fromButton) {
+  if (!navigator.geolocation) { if (fromButton) toast("Location isn't available in this browser"); return; }
+  let pos;
+  try {
+    pos = await new Promise((ok, fail) =>
+      navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, timeout: 10000, maximumAge: 3600000 }));
+  } catch (err) {
+    if (fromButton) toast("Couldn't get your location: " + (err.message || "permission denied"));
+    return;
+  }
+  try {
+    const { latitude, longitude } = pos.coords;
+    const res = await fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=" +
+      latitude + "&longitude=" + longitude + "&localityLanguage=en");
+    const g = await res.json();
+    const city = g.city || g.locality;
+    if (!city) throw new Error("no city found");
+    const region = (g.principalSubdivisionCode || "").split("-")[1];
+    const label = (g.countryCode === "CA" || g.countryCode === "US") && region
+      ? city + ", " + region
+      : city + ", " + (g.countryName || g.countryCode || "");
+    if (label === data.location) { if (fromButton) toast("Footer already says " + label); return; }
+    if (confirm("You seem to be in " + label + ".\nUpdate the footer from \"" + data.location + "\" to \"" + label + "\"?")) {
+      data.location = label;
+      save();
+    }
+  } catch (err) {
+    if (fromButton) toast("Couldn't look up your city. You can type it with Edit.");
+  }
+}
+
 // ---------- filters ----------
 function categoryKey(label) {
   const base = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "filter";
@@ -1872,6 +1920,7 @@ function renderAll() {
   renderExperience();
   renderSkills();
   renderProjectPage();
+  renderLocation();
 }
 
 // ---------- form dialog ----------
@@ -1978,6 +2027,12 @@ async function startFirebase() {
   authMod.onAuthStateChanged(auth, user => {
     if (user && OWNER_UID && user.uid === OWNER_UID) {
       setEditMode(true, "Editing", () => authMod.signOut(auth));
+      try {
+        if (!sessionStorage.getItem("locationChecked")) {
+          sessionStorage.setItem("locationChecked", "1");
+          setTimeout(() => detectLocation(false), 1500);
+        }
+      } catch (e) { /* storage blocked: skip the automatic check */ }
       return;
     }
     setEditMode(false);
