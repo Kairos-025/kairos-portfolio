@@ -1,0 +1,2065 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ekemini John (Kairos)</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: monochrome "build log". Oversized name, a status chip, a filterable project index with real metrics, then experience, stack, and contact. */
+:root {
+  --bg: #f6f6f5;
+  --surface: #ffffff;
+  --fg: #111113;
+  --muted: #5d5e63;
+  --line: #dcdcdf;
+  --chip: #ececee;
+  --invert-bg: #111113;
+  --invert-fg: #f6f6f5;
+  --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  --radius: 14px;
+  --wrap: 1080px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0d0f; --surface: #151518; --fg: #f1f1f2; --muted: #9a9ba1;
+    --line: #2a2a2f; --chip: #1e1e22; --invert-bg: #f1f1f2; --invert-fg: #0d0d0f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0d0f; --surface: #151518; --fg: #f1f1f2; --muted: #9a9ba1;
+  --line: #2a2a2f; --chip: #1e1e22; --invert-bg: #f1f1f2; --invert-fg: #0d0d0f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; border-radius: 6px; }
+
+.wrap {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- top bar ---------- */
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-block: 12px;
+}
+.mark {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.nav a {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  text-decoration: none; letter-spacing: 0.02em;
+}
+.nav a:hover { color: var(--fg); }
+
+/* ---------- hero ---------- */
+.hero { padding-block: clamp(48px, 9vw, 104px) 40px; }
+/* squiggle background behind the hero (name, intro, numbers) */
+.hero { position: relative; isolation: isolate; }
+.hero::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%);
+  background: url("images/squiggles.png") center / cover no-repeat;
+  opacity: 0.08;
+  filter: invert(1); /* light mode: dark lines on the light page */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero::before { filter: none; }
+}
+:root[data-theme="dark"] .hero::before { filter: none; }
+.status {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-mono); font-size: 12.5px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface);
+}
+/* squiggle background at the top of the About page, fading out as you scroll */
+#about-view { position: relative; isolation: isolate; }
+#about-view::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  top: 0; left: 0; right: 0; height: min(100%, max(56.25vw, 700px));
+  background: url("images/squiggles.png") center top / cover no-repeat;
+  opacity: 0.08;
+  filter: invert(1); /* light mode: dark lines on the light page */
+  -webkit-mask-image: linear-gradient(#000 65%, transparent);
+          mask-image: linear-gradient(#000 65%, transparent);
+}
+/* About page: Contact squiggles fade in from black, mirroring the fade at the top (no divider line) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #about-view:not([hidden]) ~ .contact { border-top: 0; background: var(--bg); }
+  :root:not([data-theme="light"]) #about-view:not([hidden]) ~ .contact::before {
+    -webkit-mask-image: linear-gradient(transparent, #000 40%);
+            mask-image: linear-gradient(transparent, #000 40%);
+  }
+}
+:root[data-theme="dark"] #about-view:not([hidden]) ~ .contact { border-top: 0; background: var(--bg); }
+:root[data-theme="dark"] #about-view:not([hidden]) ~ .contact::before {
+  -webkit-mask-image: linear-gradient(transparent, #000 40%);
+          mask-image: linear-gradient(transparent, #000 40%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #about-view::before { filter: none; }
+}
+:root[data-theme="dark"] #about-view::before { filter: none; }
+.dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--fg);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+.hero h1 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(44px, 10.5vw, 128px);
+  line-height: 0.92; letter-spacing: -0.045em;
+  margin: 28px 0 0; text-wrap: balance;
+}
+.hero h1 .alias {
+  display: block; font-weight: 500; color: var(--muted);
+  font-size: 0.36em; letter-spacing: -0.02em; margin-top: 14px;
+}
+.lede {
+  max-width: 62ch; font-size: clamp(17px, 2.1vw, 20px); color: var(--fg);
+  margin: 28px 0 0;
+}
+.lede strong { font-weight: 600; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 15px;
+  padding: 11px 18px; border-radius: 999px; text-decoration: none; cursor: pointer;
+  border: 1px solid var(--fg); background: transparent; color: var(--fg);
+}
+.btn.solid { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); }
+.btn:hover { transform: translateY(-1px); }
+.facts {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+  margin-top: 56px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.fact { padding: 18px 16px 18px 0; min-width: 0; }
+.fact + .fact { padding-left: 16px; border-left: 1px solid var(--line); }
+.fact b { display: block; font-family: var(--font-display); font-weight: 500; font-size: 22px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.fact span { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* ---------- ticker ---------- */
+.ticker {
+  overflow: hidden; border-bottom: 1px solid var(--line);
+  background: var(--invert-bg); color: var(--invert-fg);
+}
+.ticker-track {
+  display: flex; gap: 40px; width: max-content; padding-block: 12px;
+  font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase;
+  animation: slide 38s linear infinite;
+}
+.ticker-track span::before { content: "/ "; opacity: 0.45; }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* ---------- sections ---------- */
+section { padding-block: clamp(56px, 8vw, 96px); }
+.section-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+h2 {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em;
+  font-size: clamp(28px, 4.6vw, 44px); line-height: 1; margin: 0; text-wrap: balance;
+}
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* now */
+.now-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.now-item {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  padding: 20px; min-width: 0;
+}
+.now-item .eyebrow { display: block; margin-bottom: 10px; }
+.now-item p { margin: 0; }
+
+/* filters */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter {
+  font-family: var(--font-mono); font-size: 12.5px;
+  padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+}
+.filter[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); }
+
+/* projects */
+.projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.project {
+  display: flex; flex-direction: column; gap: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  padding: 22px; min-width: 0;
+  transition: border-color .2s ease, transform .2s ease;
+}
+.project:hover { border-color: var(--fg); transform: translateY(-2px); }
+.project.wide { grid-column: 1 / -1; }
+.p-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.p-date { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.p-cats { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.project h3 {
+  font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em;
+  font-size: 21px; line-height: 1.2; margin: 0; text-wrap: balance;
+}
+.project p { margin: 0; color: var(--muted); }
+.project ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.metric {
+  font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums;
+  padding: 5px 10px; border-radius: 8px; background: var(--chip);
+}
+.metric b { font-weight: 500; }
+.stack { display: flex; flex-wrap: wrap; gap: 6px; }
+.stack span {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
+}
+
+/* experience */
+.timeline { border-top: 1px solid var(--line); }
+.role {
+  display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 24px;
+  padding-block: 24px; border-bottom: 1px solid var(--line);
+}
+.role .when { font-family: var(--font-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.role h3 { margin: 0; font-size: 19px; font-weight: 600; }
+.role .org { color: var(--muted); margin: 2px 0 10px; }
+.role ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* skills */
+.skills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.skill-group { min-width: 0; }
+.skill-group h3 { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; }
+.skill-group .stack span { color: var(--fg); font-size: 12.5px; padding: 5px 11px; }
+
+/* contact */
+.contact {
+  background: var(--invert-bg); color: var(--invert-fg);
+  position: relative; overflow: hidden; isolation: isolate;
+}
+/* the contact section stays black with white squiggles in light AND dark mode */
+.contact { --invert-bg: #111113; --invert-fg: #f6f6f5; }
+:root[data-theme="dark"] .contact, .contact { --invert-bg: #111113; --invert-fg: #f6f6f5; }
+@media (prefers-color-scheme: dark) { .contact { border-top: 1px solid var(--line); } }
+:root[data-theme="dark"] .contact { border-top: 1px solid var(--line); }
+/* squiggle pattern behind the contact section, kept faint so the text stays readable */
+.contact::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: url("images/squiggles.png") center / cover no-repeat;
+  opacity: 0.08;
+}
+.contact .wrap { padding-block: clamp(56px, 8vw, 96px); }
+.contact h2 { font-size: clamp(32px, 6.5vw, 72px); max-width: 16ch; }
+.contact p { color: color-mix(in srgb, var(--invert-fg) 70%, transparent); max-width: 56ch; margin: 18px 0 0; }
+.contact-rows { display: grid; gap: 0; margin-top: 36px; border-top: 1px solid color-mix(in srgb, var(--invert-fg) 22%, transparent); }
+.contact-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-block: 16px; border-bottom: 1px solid color-mix(in srgb, var(--invert-fg) 22%, transparent);
+}
+.contact-row .k { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.contact-row .v { font-size: clamp(16px, 2.4vw, 22px); font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+.contact-row a.v { text-decoration: none; }
+.contact-row a.v:hover { text-decoration: underline; }
+.email-group { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.copy {
+  font-family: var(--font-mono); font-size: 12px; cursor: pointer;
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--invert-fg) 40%, transparent);
+  background: transparent; color: var(--invert-fg);
+}
+footer { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+footer .wrap { padding-block: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* about view */
+.about-hero { padding-block: clamp(48px, 8vw, 96px) 8px; }
+.back {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); text-decoration: none;
+}
+.back:hover { color: var(--fg); }
+.about-hero h1 {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: -0.04em;
+  font-size: clamp(38px, 8vw, 96px); line-height: 0.95; margin: 22px 0 0; text-wrap: balance;
+}
+.about-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.story { display: grid; gap: 18px; font-size: 17.5px; max-width: 62ch; }
+.story p { margin: 0; }
+.story .big { font-size: clamp(20px, 2.6vw, 26px); line-height: 1.4; font-weight: 500; letter-spacing: -0.01em; }
+.facts-card {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  padding: 8px 20px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 72px);
+}
+.facts-card dl { margin: 0; }
+.facts-card .row { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; padding-block: 13px; border-bottom: 1px solid var(--line); }
+.facts-card .row:last-child { border-bottom: 0; }
+.facts-card dt { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; padding-top: 2px; }
+.facts-card dd { margin: 0; font-weight: 500; }
+.values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.value { border-top: 2px solid var(--fg); padding-top: 16px; min-width: 0; }
+.value h3 { font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -0.02em; margin: 0 0 8px; }
+.value p { margin: 0; color: var(--muted); }
+.interests { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.interest {
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+  padding: 18px; min-width: 0;
+}
+.interest .eyebrow { display: block; margin-bottom: 8px; }
+.interest p { margin: 0; font-size: 15px; }
+
+@media (max-width: 860px) {
+  .about-grid, .values { grid-template-columns: minmax(0, 1fr); }
+  .facts-card { position: static; }
+  .interests { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .interests { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  .projects, .now-list { grid-template-columns: minmax(0, 1fr); }
+  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fact:nth-child(3) { padding-left: 0; border-left: 0; }
+  .fact:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .role { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
+@media (max-width: 520px) {
+  .nav { display: none; }
+  .skills { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- edit mode (only visible to you) ---------- */
+.edit-slot:empty { display: none; }
+.edit-slot { margin-top: 14px; }
+.filter-wrap { display: inline-flex; align-items: center; }
+.filter-wrap .chip-x { padding: 0 4px 0 4px; }
+.add-filter { border-style: dashed; color: var(--muted); background: transparent; }
+.status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.switch {
+  display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--fg);
+  background: transparent; border: 1px dashed var(--muted); border-radius: 999px; padding: 5px 12px 5px 6px;
+}
+.switch-track { width: 34px; height: 20px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); position: relative; flex: none; }
+.switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .2s ease; }
+.switch[aria-checked="true"] .switch-track { background: var(--invert-bg); border-color: var(--invert-bg); }
+.switch[aria-checked="true"] .switch-track::after { transform: translateX(14px); background: var(--invert-fg); }
+.edit-tools { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.role .edit-tools { margin-top: 12px; }
+.tool {
+  font-family: var(--font-mono); font-size: 12px; cursor: pointer;
+  padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg);
+}
+.tool:hover { border-color: var(--fg); }
+.tool.danger:hover { border-color: #c0392b; color: #c0392b; }
+.add-card {
+  font-family: var(--font-mono); font-size: 14px; cursor: pointer; min-height: 120px;
+  border: 1.5px dashed var(--muted); border-radius: var(--radius); background: transparent; color: var(--muted);
+}
+.add-card:hover { color: var(--fg); border-color: var(--fg); }
+.add-row { width: 100%; min-height: 64px; margin-top: 16px; }
+.skills .add-card { min-height: 80px; }
+.chip-x {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 0 0 0 6px;
+}
+.chip-x:hover { color: #c0392b; }
+.chip-add { display: inline-flex; border: 1px dashed var(--muted); border-radius: 999px; overflow: hidden; }
+.chip-add input { width: 92px; border: 0; background: transparent; color: var(--fg); font-family: var(--font-mono); font-size: 12px; padding: 4px 4px 4px 10px; }
+.chip-add button { border: 0; background: transparent; color: var(--fg); cursor: pointer; padding: 0 10px; font-size: 14px; }
+.edit-bar {
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: calc(100vw - 32px);
+  font-family: var(--font-mono); font-size: 12.5px;
+  background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 8px 7px 14px; box-shadow: 0 8px 30px rgba(0,0,0,.12);
+}
+.edit-bar code { font-family: var(--font-mono); overflow-wrap: anywhere; }
+.edit-dot { width: 8px; height: 8px; border-radius: 50%; background: #2e9e5b; }
+.toast {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  font-family: var(--font-mono); font-size: 12.5px;
+  background: var(--invert-bg); color: var(--invert-fg); padding: 9px 14px; border-radius: 10px;
+}
+dialog#editor {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); overflow: auto;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 24px;
+}
+dialog#editor::backdrop { background: rgba(0,0,0,.45); }
+#editor h2 { font-size: 24px; margin-bottom: 18px; }
+.field { display: grid; gap: 5px; margin-bottom: 14px; }
+.field > label { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.field input:not([type=checkbox]), .field textarea {
+  font: inherit; font-size: 15px; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; width: 100%;
+}
+.field textarea { resize: vertical; }
+.field small { color: var(--muted); font-size: 12.5px; }
+.checks { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.checks legend { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; padding: 0; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; cursor: pointer; }
+.editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+
+/* ---------- project media + project page ---------- */
+.p-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--chip); }
+.p-cover-wrap { position: relative; }
+.p-cover-wrap .p-cover { display: block; }
+.play-badge { position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.6); color: #fff; font-size: 20px; padding-left: 4px; pointer-events: none; }
+.p-cover-frame { overflow: hidden; }
+.p-cover-frame iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
+.p-view { font-family: var(--font-mono); font-size: 13px; text-decoration: none; align-self: flex-start; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+.p-view:hover { opacity: .7; }
+.project-page { padding-block: clamp(40px, 7vw, 88px) clamp(56px, 8vw, 96px); }
+.pp-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 22px; }
+.pp-title { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.04em; font-size: clamp(32px, 5vw, 60px); line-height: 1.02; margin: 12px 0 0; text-wrap: balance; }
+.pp-summary { font-size: clamp(17px, 2.1vw, 20px); color: var(--muted); max-width: 62ch; margin: 18px 0 0; }
+.pp-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.pp-video, .pp-hero-img { margin-top: 36px; width: 100%; border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden; background: #000; }
+.pp-video { aspect-ratio: 16 / 9; }
+.pp-video iframe, .pp-video video { width: 100%; height: 100%; border: 0; display: block; }
+.pp-hero-img { display: block; aspect-ratio: 16 / 9; object-fit: cover; }
+.pp-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; margin-top: 40px; align-items: start; }
+.pp-text { display: grid; gap: 16px; font-size: 17px; max-width: 66ch; }
+.pp-text p { margin: 0; }
+.pp-text ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.pp-h { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.02em; margin: 12px 0 0; }
+.pp-side { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 20px; }
+.pp-side .eyebrow + * { margin-bottom: 8px; }
+.pp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
+.pp-gallery figure { margin: 0; }
+.pp-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
+.pp-gallery figcaption { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
+.project-page .edit-tools { margin-top: 32px; }
+@media (max-width: 860px) { .pp-body { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dot, .ticker-track { animation: none; }
+  .project, .btn { transition: none; }
+  .project:hover, .btn:hover { transform: none; }
+}
+</style>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="mark" href="#top">kairos.</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#about">about</a>
+      <a href="#work">work</a>
+      <a href="#experience">experience</a>
+      <a href="#stack">stack</a>
+      <a href="#contact">contact</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div class="status-row"><span class="status"><span class="dot" aria-hidden="true"></span><span id="status-text">Open to work</span></span><span id="status-switch-holder"></span></div>
+    <h1>Ekemini John<span class="alias">goes by Kairos</span></h1>
+    <p class="lede" id="lede"></p><div class="edit-slot" id="slot-intro"></div>
+    <div class="hero-actions">
+      <a class="btn solid" href="#work">See my work</a>
+      <a class="btn" href="#about">About me</a>
+      <a class="btn" href="https://github.com/Kairos-025" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn" href="https://www.linkedin.com/in/ekemini-john-47730b226/" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+    <div class="facts" id="facts"></div>
+    <div class="edit-slot" id="slot-facts"></div>
+  </div>
+  </div>
+
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span>Python</span><span>Java</span><span>C/C++</span><span>TypeScript</span><span>React</span><span>SQL</span><span>scikit-learn</span><span>LLMs + RAG</span><span>OpenGL</span><span>Linux</span><span>Git</span><span>Firebase</span>
+      <span>Python</span><span>Java</span><span>C/C++</span><span>TypeScript</span><span>React</span><span>SQL</span><span>scikit-learn</span><span>LLMs + RAG</span><span>OpenGL</span><span>Linux</span><span>Git</span><span>Firebase</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Right now</h2>
+        <span class="eyebrow" id="now-eyebrow"></span>
+      </div>
+      <div class="now-list" id="now-list"></div>
+      <div class="edit-slot" id="slot-now"></div>
+    </div>
+  </section>
+
+  <section id="work">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Selected work</h2>
+        <div class="filters" id="filters" role="group" aria-label="Filter projects"></div>
+      </div>
+
+      <div class="projects" id="projects"></div>
+    </div>
+  </section>
+
+  <section id="experience">
+    <div class="wrap">
+      <div class="section-head"><h2>Experience</h2></div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <section id="stack">
+    <div class="wrap">
+      <div class="section-head"><h2>Stack</h2></div>
+      <div class="skills" id="skills"></div>
+    </div>
+  </section>
+</main>
+
+<main id="about-view" hidden>
+  <div class="wrap about-hero">
+    <a class="back" href="#top">← back to work</a>
+    <h1 id="about-title">The person behind the code</h1>
+  </div>
+
+  <section>
+    <div class="wrap about-grid">
+      <div><div class="story" id="story"></div><div class="edit-slot" id="slot-story"></div></div>
+      <aside class="facts-card" aria-label="Quick facts">
+        <dl id="about-facts"></dl><div class="edit-slot" id="slot-about-facts"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><h2>How I work</h2></div>
+      <div class="values" id="values"></div>
+      <div class="edit-slot" id="slot-values"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head"><h2>Beyond code</h2></div>
+      <div class="interests" id="interests"></div>
+      <div class="edit-slot" id="slot-interests"></div>
+    </div>
+  </section>
+</main>
+
+<main id="project-view" hidden>
+  <div class="wrap project-page" id="project-page"></div>
+</main>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <span class="eyebrow" style="color:inherit;opacity:.6">Contact</span>
+    <h2 style="margin-top:14px">Let's build something.</h2>
+    <p data-when="open">I'm open to work in software development, AI, or data. The quickest way to reach me is email.</p><p data-when="working" hidden>I'm currently working<span data-workplace></span>, but always happy to talk about interesting projects. The quickest way to reach me is email.</p>
+    <div class="contact-rows">
+      <div class="contact-row">
+        <span class="k">Personal email</span>
+        <span class="email-group">
+          <span class="v">johnkemi25@gmail.com</span>
+          <button class="copy" type="button">Copy</button>
+        </span>
+      </div>
+      <div class="contact-row">
+        <span class="k">School email</span>
+        <span class="email-group">
+          <span class="v">john73@uwindsor.ca</span>
+          <button class="copy" type="button">Copy</button>
+        </span>
+      </div>
+      <div class="contact-row">
+        <span class="k">LinkedIn</span>
+        <a class="v" href="https://www.linkedin.com/in/ekemini-john-47730b226/" target="_blank" rel="noopener">linkedin.com/in/ekemini-john-47730b226</a>
+      </div>
+      <div class="contact-row">
+        <span class="k">GitHub</span>
+        <a class="v" href="https://github.com/Kairos-025" target="_blank" rel="noopener">github.com/Kairos-025</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap"><span>Ekemini John · Windsor, ON</span><span>© <span id="year">2026</span></span></div>
+</footer>
+
+
+<dialog id="editor" aria-labelledby="editor-title">
+  <form id="editor-form" method="dialog">
+    <h2 id="editor-title">Edit</h2>
+    <div id="editor-fields"></div>
+    <div class="editor-actions">
+      <button type="button" class="btn" id="editor-cancel">Cancel</button>
+      <button type="submit" class="btn solid">Save</button>
+    </div>
+  </form>
+</dialog>
+<div id="edit-bar" class="edit-bar" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script type="module">
+// =====================================================================
+//  SETTINGS: fill these in to turn on live editing (see setup steps)
+// =====================================================================
+// From Firebase console > Project settings > Your apps > Web app > Config
+const firebaseConfig = {
+  apiKey: "AIzaSyDilzJXYt-whu60u73Z9FU0AV_Nq2JWogY",
+  authDomain: "kairos-portfolio.firebaseapp.com",
+  projectId: "kairos-portfolio",
+  storageBucket: "kairos-portfolio.firebasestorage.app",
+  messagingSenderId: "436710765807",
+  appId: "1:436710765807:web:6542491f372d930e0a971a"
+};
+// Your Firebase user ID. Sign in once with ?admin and the page shows it.
+const OWNER_UID = "UuqB2kdigXPy8Qaok4AK0txO9Sn1";
+// =====================================================================
+
+const DEFAULT_DATA = {
+  "status": {
+    "open": true,
+    "workplace": ""
+  },
+  "projects": [
+    {
+      "title": "Fine-Tuning Large Language Models: Evaluating Prompt Engineering and Retrieval-Augmented Generation as Baseline Techniques",
+      "label": "AI & ML · Capstone",
+      "date": "Sep 2026 – now",
+      "cats": [
+        "ai"
+      ],
+      "wide": true,
+      "summary": "A two-person capstone, supervised by faculty, that measures how far prompt engineering and retrieval-augmented generation can take an LLM before fine-tuning is needed.",
+      "bullets": [
+        "Evaluating both techniques as baselines on the same question set",
+        "Every phase runs on its own branch with pull request review, in a public repository",
+        "Presenting a working demo and poster at the December demo day"
+      ],
+      "metrics": [],
+      "stack": [
+        "Python",
+        "LLMs",
+        "RAG",
+        "Git"
+      ]
+    },
+    {
+      "title": "AI-Powered Fraud Detection Platform",
+      "label": "AI & ML · Web",
+      "date": "Feb 2026",
+      "cats": [
+        "ai",
+        "web"
+      ],
+      "wide": false,
+      "summary": "Flags suspicious transactions and explains each one in plain language, so non-technical users can act on it.",
+      "bullets": [
+        "Isolation Forest model flags suspicious transactions from Amount and Time patterns at a 10% contamination rate",
+        "Pandas cleaning and validation handles missing values and type conversions before analysis",
+        "Gemini API turns anomaly scores into business-friendly explanations",
+        "Interactive Plotly scatter plots and distribution charts present the findings",
+        "Firebase pipeline stores flagged cases with timestamps and review status",
+        "Five modular classes, with credentials kept in environment variables"
+      ],
+      "metrics": [
+        {
+          "value": "10%",
+          "label": "contamination"
+        },
+        {
+          "value": "50+",
+          "label": "records cleaned"
+        },
+        {
+          "value": "5",
+          "label": "modular classes"
+        }
+      ],
+      "stack": [
+        "Python",
+        "Streamlit",
+        "scikit-learn",
+        "Pandas",
+        "Plotly",
+        "Gemini API",
+        "Firebase"
+      ]
+    },
+    {
+      "title": "Frutica",
+      "label": "Web & Data · Full stack",
+      "date": "Oct – Nov 2025 · Updated Nov 2026",
+      "cats": [
+        "web"
+      ],
+      "wide": false,
+      "summary": "A full-stack website for a fruit brand, with a product catalogue, video hero carousel, interactive map, and a contact form backed by a database.",
+      "bullets": [
+        "Node.js and Express REST API with a SQLite database for products, contact messages, and orders",
+        "Order prices are calculated and validated on the server, so values sent from the browser are never trusted",
+        "Product pages load from the API and fall back to local JSON when the backend is offline",
+        "Fruit search pulls nutrition data from a public API, with a local fallback when the request fails",
+        "Leaflet map with a store popup, switching to an embedded map when the site runs without a server",
+        "Responsive layout with a collapsible mobile menu, and WebM/MP4 video for cross-browser playback"
+      ],
+      "metrics": [
+        {
+          "value": "8",
+          "label": "API routes"
+        },
+        {
+          "value": "4",
+          "label": "database tables"
+        },
+        {
+          "value": "20",
+          "label": "product pages"
+        },
+        {
+          "value": "88%",
+          "label": "smaller hero videos"
+        }
+      ],
+      "stack": [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Node.js",
+        "Express",
+        "SQLite",
+        "REST APIs",
+        "Leaflet"
+      ]
+    },
+    {
+      "title": "Virtual Reality Museum",
+      "label": "3D & Graphics · Team lead",
+      "date": "Feb – Apr 2025",
+      "cats": [
+        "3d"
+      ],
+      "wide": false,
+      "summary": "An explorable 3D museum built in Java with a four-person Scrum team I led.",
+      "bullets": [
+        "360° navigation with dynamic camera movement across 5 lighting zones in a 200 × 30 × 100 environment",
+        "Modelled and textured 20+ assets in Blender, with sound effects, real-time animation, and collision detection",
+        "Refined the rendering pipeline to hold a stable 60 FPS",
+        "Sprint planning and code reviews kept the team ahead of schedule"
+      ],
+      "metrics": [
+        {
+          "value": "15+",
+          "label": "exhibits"
+        },
+        {
+          "value": "20+",
+          "label": "3D assets"
+        },
+        {
+          "value": "60",
+          "label": "FPS"
+        },
+        {
+          "value": "2 wks",
+          "label": "early"
+        }
+      ],
+      "stack": [
+        "Java",
+        "Java3D",
+        "Blender",
+        "Eclipse"
+      ]
+    },
+    {
+      "title": "B-Spline 3D Animation Engine",
+      "label": "3D & Graphics · Systems",
+      "date": "Feb – Apr 2025",
+      "cats": [
+        "3d",
+        "systems"
+      ],
+      "wide": false,
+      "summary": "A real-time engine in C that models a snake's slithering motion from B-Spline curves.",
+      "bullets": [
+        "Sinusoidal undulation (0.5 amplitude, 1.2 frequency) drives a 16-sided cylindrical body",
+        "A following camera keeps the head centred through full-range movement",
+        "Optimized rendering and camera transitions for smooth, stable motion"
+      ],
+      "metrics": [
+        {
+          "value": "40",
+          "label": "control points"
+        },
+        {
+          "value": "50",
+          "label": "samples / segment"
+        },
+        {
+          "value": "60",
+          "label": "FPS"
+        }
+      ],
+      "stack": [
+        "C",
+        "OpenGL"
+      ]
+    },
+    {
+      "title": "Multi-Client TCP Chat Server",
+      "label": "Systems · Networking",
+      "date": "Jul 2026",
+      "cats": [
+        "systems"
+      ],
+      "wide": false,
+      "summary": "A chat server that keeps many users talking at once, built for my networking course.",
+      "bullets": [
+        "Each client connection gets its own thread",
+        "Tested with several live clients in separate terminals"
+      ],
+      "metrics": [],
+      "stack": [
+        "Python",
+        "Sockets",
+        "Threading",
+        "TCP/IP"
+      ]
+    },
+    {
+      "title": "CPU Scheduling Simulator",
+      "label": "Systems · Team",
+      "date": "Mar 2026",
+      "cats": [
+        "systems"
+      ],
+      "wide": false,
+      "summary": "A team simulator for FIFO, SJF, Round Robin, and Priority scheduling. I built the FIFO algorithm.",
+      "bullets": [
+        "Reads jobs from JSON and outputs Gantt charts with turnaround and waiting times",
+        "Unit tests cover ties, empty queues, and single-process workloads"
+      ],
+      "metrics": [],
+      "stack": [
+        "Python",
+        "JSON",
+        "Unit Testing"
+      ]
+    },
+    {
+      "title": "Iterated Prisoner's Dilemma Strategy Research",
+      "label": "AI & ML · Team",
+      "date": "Winter 2026",
+      "cats": [
+        "ai"
+      ],
+      "wide": false,
+      "summary": "A team study of which strategies win repeated games. I implemented the Genetic Algorithm.",
+      "bullets": [
+        "Evolved strategies and compared them with hill climbing and tabu search",
+        "Controlled, repeatable experiments so results compare fairly"
+      ],
+      "metrics": [],
+      "stack": [
+        "Python",
+        "Genetic Algorithms",
+        "scikit-learn"
+      ]
+    },
+    {
+      "title": "Sales Tracker for Elyni Global",
+      "label": "Web & Data · Client",
+      "date": "2026",
+      "cats": [
+        "web"
+      ],
+      "wide": false,
+      "summary": "A business workbook that gives a small company its sales, monthly totals, and KPIs in one place.",
+      "bullets": [
+        "Three sheets: Sales Data, Monthly Tracker, Dashboard",
+        "Automatic stock alerts and profit margin highlighting"
+      ],
+      "metrics": [],
+      "stack": [
+        "Excel",
+        "Formulas",
+        "Dashboards"
+      ]
+    }
+  ],
+  "experience": [
+    {
+      "when": "Summer 2026",
+      "title": "Package Handler",
+      "org": "Dragonfly (Intelcom) · Windsor, ON",
+      "bullets": [
+        "Operated a roller conveyor system in a fast-paced warehouse",
+        "Scanned and labelled packages for accurate aisle sorting, following safety procedures"
+      ]
+    },
+    {
+      "when": "January 2026",
+      "title": "Robotics Mentor",
+      "org": "Black Boys Code · Windsor, ON",
+      "bullets": [
+        "Mentored 5 high school students building and programming LEGO SPIKE Prime robots with colour and distance sensors",
+        "90% completed their autonomous navigation challenges",
+        "Adapted examples for different skill levels so every student progressed",
+        "Worked with 3 mentors to run a 4-hour workshop for 15+ participants, handling hardware and app connectivity issues"
+      ]
+    },
+    {
+      "when": "October 2025",
+      "title": "Google DevFest 2025, Participant",
+      "org": "University of Windsor · Windsor, ON",
+      "bullets": [
+        "Completed hands-on workshops in cloud deployment (AWS/Azure) and full-stack development",
+        "Worked through hackathon sessions with 50+ students and industry professionals",
+        "Presented my portfolio website and received feedback from 3 industry mentors"
+      ]
+    },
+    {
+      "when": "May – Jul 2025",
+      "title": "Unity Game Programming Certificate",
+      "org": "University of Windsor",
+      "bullets": []
+    },
+    {
+      "when": "Jun – Aug 2023",
+      "title": "Restoration Labourer",
+      "org": "AmbiMi · Windsor, ON",
+      "bullets": [
+        "Worked with a 5-person crew to complete 12+ residential projects under tight deadlines",
+        "Maintained a 98% safety compliance rate in hazardous environments",
+        "Helped onboard 2 new employees on equipment operation and safety protocols"
+      ]
+    },
+    {
+      "when": "2023 – 2028",
+      "title": "B.Sc. Honours, Computer Science Co-op",
+      "org": "University of Windsor · Software Engineering, minor in Applied IT",
+      "bullets": [
+        "Computer Architecture, System Programming, Operating Systems, Computer Networks, Database Management Systems, Data Structures & Algorithms, Software Development, Cyber Ethics"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "group": "Languages",
+      "items": [
+        "Python",
+        "Java",
+        "C/C++",
+        "JavaScript",
+        "TypeScript",
+        "SQL",
+        "Bash",
+        "HTML/CSS"
+      ]
+    },
+    {
+      "group": "AI & Data",
+      "items": [
+        "scikit-learn",
+        "Pandas",
+        "NumPy",
+        "LLMs",
+        "RAG",
+        "Gemini API",
+        "Power BI"
+      ]
+    },
+    {
+      "group": "Web & Graphics",
+      "items": [
+        "React",
+        "Node.js",
+        "Express",
+        "REST APIs",
+        "WordPress",
+        "Firebase",
+        "OpenGL",
+        "WebGL",
+        "CUDA",
+        "Blender",
+        "Figma"
+      ]
+    },
+    {
+      "group": "Tools",
+      "items": [
+        "Git",
+        "GitHub",
+        "Docker",
+        "Linux",
+        "VS Code",
+        "IntelliJ",
+        "Eclipse",
+        "Jupyter",
+        "AWS",
+        "Azure",
+        "CI/CD",
+        "LaTeX"
+      ]
+    }
+  ],
+  "intro": "Computer Science student at the **University of Windsor**, specializing in Software Engineering with a minor in Applied IT. I build across **AI**, **systems**, and **3D graphics**, and I'm working toward a career as an **AI/ML engineer**.",
+  "facts": [
+    {
+      "value": "auto",
+      "label": "projects shipped"
+    },
+    {
+      "value": "60 FPS",
+      "label": "real-time C engine"
+    },
+    {
+      "value": "2 wks",
+      "label": "early, as Scrum lead"
+    },
+    {
+      "value": "2028",
+      "label": "expected graduation"
+    }
+  ],
+  "now": {
+    "eyebrow": "auto",
+    "items": [
+      {
+        "label": "Capstone",
+        "text": "Comparing prompt engineering and retrieval-augmented generation for LLM question answering."
+      },
+      {
+        "label": "Dec 4",
+        "text": "Preparing a working demo and poster for the capstone demo day."
+      },
+      {
+        "label": "Next",
+        "text": "{Status} in software, AI, or data."
+      }
+    ]
+  },
+  "about": {
+    "title": "The person behind the code",
+    "story": [
+      "I'm Ekemini John, and most people call me Kairos. I grew up in Nigeria, moved to Canada to study, and now build software in Windsor, Ontario.",
+      "Before starting university, I completed a University Foundation Programme at Bridge House College. That year taught me how to learn independently, which still shapes how I work. Today I'm a Computer Science Honours Co-op student at the University of Windsor, specializing in Software Engineering with a minor in Applied IT.",
+      "I'm drawn to software that people can actually use. My fraud detection project explains every flagged transaction in plain language, because a result nobody understands doesn't help anyone. That same idea pulled me toward mentoring, where I helped high school students program their first robots.",
+      "My goal is to become an AI/ML engineer. Right now I'm working on a capstone that compares prompt engineering with retrieval-augmented generation, and I'm {status}, learning on real systems."
+    ],
+    "facts": [
+      {
+        "label": "Name",
+        "value": "Ekemini John (Kairos)"
+      },
+      {
+        "label": "Based in",
+        "value": "Windsor, Ontario"
+      },
+      {
+        "label": "From",
+        "value": "Nigeria"
+      },
+      {
+        "label": "Studying",
+        "value": "Computer Science, Software Engineering"
+      },
+      {
+        "label": "Minor",
+        "value": "Applied IT"
+      },
+      {
+        "label": "Graduating",
+        "value": "2028"
+      },
+      {
+        "label": "Goal",
+        "value": "AI/ML engineer"
+      },
+      {
+        "label": "Status",
+        "value": "auto"
+      }
+    ],
+    "values": [
+      {
+        "title": "Learn by building",
+        "text": "I pick up new tools fastest by making something real with them, from a C graphics engine to a React dashboard."
+      },
+      {
+        "title": "Lead the team",
+        "text": "As Scrum lead on a four-person team, I ran planning and code reviews, and we delivered two weeks early."
+      },
+      {
+        "title": "Explain it simply",
+        "text": "Whether I'm mentoring students or writing for non-technical users, I break ideas into clear, small steps."
+      }
+    ],
+    "interests": [
+      {
+        "label": "Music",
+        "text": "I sing and train with a vocal coach."
+      },
+      {
+        "label": "Food",
+        "text": "I cook Nigerian dishes like plantains and pap."
+      },
+      {
+        "label": "Games",
+        "text": "I unwind on the PS5."
+      },
+      {
+        "label": "Languages",
+        "text": "I'm learning French."
+      },
+      {
+        "label": "Ideas",
+        "text": "I've studied philosophy, from Aristotle and Kant to Mill."
+      }
+    ]
+  }
+};
+
+const DEFAULT_CATEGORIES = [
+  { key: "ai", label: "AI & ML" },
+  { key: "systems", label: "Systems" },
+  { key: "web", label: "Web & Data" },
+  { key: "3d", label: "3D & Graphics" }
+];
+
+const configured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+const wantsAdmin = new URLSearchParams(location.search).has("admin");
+const LOCAL_KEY = "portfolio-preview-data";
+
+let data = normalize(clone(DEFAULT_DATA));
+let canEdit = false;
+let store = null;          // { save(data) -> Promise }
+let currentFilter = "all";
+
+// ---------- helpers ----------
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function arr(v) { return Array.isArray(v) ? v : []; }
+function str(v) { return typeof v === "string" ? v : ""; }
+function normalize(d) {
+  d = d || {};
+  return {
+    status: { open: d.status ? d.status.open !== false : true, workplace: str(d.status && d.status.workplace) },
+    categories: (Array.isArray(d.categories) ? d.categories : DEFAULT_CATEGORIES)
+      .map(c => ({ key: str(c.key), label: str(c.label) })).filter(c => c.key && c.label),
+    projects: arr(d.projects).map(p => ({
+      title: str(p.title), label: str(p.label), date: str(p.date),
+      cats: arr(p.cats).map(str).filter(Boolean), wide: Boolean(p.wide),
+      summary: str(p.summary), bullets: arr(p.bullets).map(str).filter(Boolean),
+      metrics: arr(p.metrics).map(m => ({ value: str(m.value), label: str(m.label) })).filter(m => m.value || m.label),
+      stack: arr(p.stack).map(str).filter(Boolean),
+      id: str(p.id),
+      cover: str(p.cover),
+      gallery: arr(p.gallery).map(g => ({ src: str(g.src), caption: str(g.caption) })).filter(g => g.src),
+      video: str(p.video),
+      details: str(p.details),
+      links: arr(p.links).map(l => ({ label: str(l.label), url: str(l.url) })).filter(l => l.url)
+    })),
+    experience: arr(d.experience).map(e => ({
+      when: str(e.when), title: str(e.title), org: str(e.org), bullets: arr(e.bullets).map(str).filter(Boolean)
+    })),
+    skills: arr(d.skills).map(g => ({ group: str(g.group), items: arr(g.items).map(str).filter(Boolean) })),
+    intro: typeof d.intro === "string" ? d.intro : DEFAULT_DATA.intro,
+    facts: (Array.isArray(d.facts) ? d.facts : DEFAULT_DATA.facts).map(f => ({ value: str(f.value), label: str(f.label) })),
+    now: {
+      eyebrow: d.now ? str(d.now.eyebrow) : DEFAULT_DATA.now.eyebrow,
+      items: (d.now && Array.isArray(d.now.items) ? d.now.items : DEFAULT_DATA.now.items).map(n => ({ label: str(n.label), text: str(n.text) }))
+    },
+    about: (() => {
+      const a = d.about || {}, def = DEFAULT_DATA.about;
+      return {
+        title: typeof a.title === "string" ? a.title : def.title,
+        story: (Array.isArray(a.story) ? a.story : def.story).map(str).filter(Boolean),
+        facts: (Array.isArray(a.facts) ? a.facts : def.facts).map(f => ({ label: str(f.label), value: str(f.value) })),
+        values: (Array.isArray(a.values) ? a.values : def.values).map(v => ({ title: str(v.title), text: str(v.text) })),
+        interests: (Array.isArray(a.interests) ? a.interests : def.interests).map(v => ({ label: str(v.label), text: str(v.text) }))
+      };
+    })()
+  };
+}
+// build elements with textContent only, so saved text can never inject HTML
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function btn(text, cls, onClick, label) {
+  const b = el("button", cls, text);
+  b.type = "button";
+  if (label) b.setAttribute("aria-label", label);
+  b.addEventListener("click", onClick);
+  return b;
+}
+function lines(text) { return text.split("\n").map(s => s.trim()).filter(Boolean); }
+function move(list, i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+async function save() {
+  renderAll();
+  if (!store) return;
+  try {
+    await store.save(clone(data));
+    toast("Saved");
+  } catch (err) {
+    console.error(err);
+    toast("Couldn't save: " + (err.message || err));
+  }
+}
+
+// ---------- status ----------
+function statusText() {
+  if (data.status.open) return "Open to work";
+  return "Currently working" + (data.status.workplace ? " at " + data.status.workplace : "");
+}
+function renderStatus() {
+  const text = statusText();
+  document.getElementById("status-text").textContent = text;
+  const mode = data.status.open ? "open" : "working";
+  document.querySelectorAll("[data-when]").forEach(n => { n.hidden = n.dataset.when !== mode; });
+  document.querySelectorAll("[data-workplace]").forEach(n => {
+    n.textContent = data.status.workplace ? " at " + data.status.workplace : "";
+  });
+
+  const holder = document.getElementById("status-switch-holder");
+  holder.textContent = "";
+  if (!canEdit) return;
+  const sw = el("button", "switch");
+  sw.type = "button";
+  sw.setAttribute("role", "switch");
+  sw.setAttribute("aria-checked", String(data.status.open));
+  sw.setAttribute("aria-label", "Open to work");
+  sw.append(el("span", "switch-track"), el("span", "switch-label", "Open to work"));
+  sw.addEventListener("click", () => {
+    if (data.status.open) {
+      openForm("Currently working", [
+        { name: "workplace", label: "Where? (optional)", hint: "Shown as \"Currently working at …\". Leave blank to just say \"Currently working\"." }
+      ], { workplace: data.status.workplace }, v => {
+        data.status = { open: false, workplace: v.workplace.trim() };
+        save();
+      });
+    } else {
+      data.status.open = true;
+      save();
+    }
+  });
+  holder.append(sw);
+}
+
+// ---------- projects ----------
+function projectFields() {
+  return [
+    { name: "title", label: "Title", required: true },
+    { name: "label", label: "Label", hint: "e.g. AI & ML · Team" },
+    { name: "date", label: "Date", hint: "e.g. Feb – Apr 2026" },
+    { name: "cats", label: "Filters", type: "checks", options: data.categories, hint: "Add new filters with + Add filter above the projects." },
+    { name: "wide", label: "Full-width card", type: "checkbox" },
+    { name: "summary", label: "Summary", type: "textarea", rows: 2 },
+    { name: "bullets", label: "Highlights", type: "textarea", rows: 4, hint: "One per line" },
+    { name: "metrics", label: "Metrics", type: "textarea", rows: 3, hint: "One per line, as number | label, e.g. 60 | FPS" },
+    { name: "stack", label: "Tech stack", hint: "Comma separated, e.g. Python, React, SQL" },
+    { name: "cover", label: "Cover", hint: "Picture or video shown on the card: images/cover.png, images/demo.mp4, or a YouTube/Vimeo link. Videos play silently on a loop." },
+    { name: "details", label: "Full description", type: "textarea", rows: 8,
+      hint: "Shown on the project page. Leave a blank line between paragraphs. **double stars** = bold." },
+    { name: "gallery", label: "Gallery images", type: "textarea", rows: 4,
+      hint: "One per line, as image | caption, e.g. images/fraud-dashboard.png | Flagged transactions view" },
+    { name: "video", label: "Video", hint: "A YouTube or Vimeo link (unlisted is fine), or a path like images/demo.mp4" },
+    { name: "links", label: "Links and files", type: "textarea", rows: 4,
+      hint: "One per line, as label | link, e.g. Code | https://github.com/Kairos-025/repo  or  Report (PDF) | files/report.pdf" }
+  ];
+}
+function projectToForm(p) {
+  return {
+    title: p.title, label: p.label, date: p.date, cats: p.cats, wide: p.wide, summary: p.summary,
+    bullets: p.bullets.join("\n"),
+    metrics: p.metrics.map(m => m.value + " | " + m.label).join("\n"),
+    stack: p.stack.join(", "),
+    cover: p.cover || "", details: p.details || "", video: p.video || "",
+    gallery: (p.gallery || []).map(g => g.src + (g.caption ? " | " + g.caption : "")).join("\n"),
+    links: (p.links || []).map(l => l.label + " | " + l.url).join("\n")
+  };
+}
+function formToProject(v) {
+  return {
+    title: v.title.trim(), label: v.label.trim(), date: v.date.trim(), cats: v.cats, wide: v.wide,
+    summary: v.summary.trim(), bullets: lines(v.bullets),
+    metrics: lines(v.metrics).map(l => {
+      const [value, ...rest] = l.split("|");
+      return { value: value.trim(), label: rest.join("|").trim() };
+    }),
+    stack: v.stack.split(",").map(s => s.trim()).filter(Boolean),
+    cover: (v.cover || "").trim(),
+    details: (v.details || "").trim(),
+    video: (v.video || "").trim(),
+    gallery: lines(v.gallery || "").map(l => {
+      const [src, ...rest] = l.split("|");
+      return { src: src.trim(), caption: rest.join("|").trim() };
+    }).filter(g => g.src),
+    links: lines(v.links || "").map(l => {
+      const [label, ...rest] = l.split("|");
+      const url = rest.join("|").trim();
+      return url ? { label: label.trim(), url } : { label: "Link", url: label.trim() };
+    }).filter(l => l.url)
+  };
+}
+function editTools(list, i, onEdit, what) {
+  const tools = el("div", "edit-tools");
+  tools.append(
+    btn("Edit", "tool", onEdit),
+    btn("↑", "tool", () => { move(list, i, -1); save(); }, "Move " + what + " up"),
+    btn("↓", "tool", () => { move(list, i, 1); save(); }, "Move " + what + " down"),
+    btn("Delete", "tool danger", () => {
+      if (confirm("Delete this " + what + "?")) { list.splice(i, 1); save(); }
+    })
+  );
+  return tools;
+}
+function renderProjects() {
+  const box = document.getElementById("projects");
+  box.textContent = "";
+  data.projects.forEach((p, i) => {
+    const a = el("article", "project" + (p.wide ? " wide" : ""));
+    a.dataset.cats = p.cats.join(" ");
+    const cover = coverMedia(p, "card");
+    if (cover) a.append(cover);
+    const top = el("div", "p-top");
+    top.append(el("span", "p-cats", p.label), el("span", "p-date", p.date));
+    a.append(top, el("h3", null, p.title));
+    if (p.summary) a.append(el("p", null, p.summary));
+    if (p.bullets.length) {
+      const ul = el("ul");
+      p.bullets.forEach(b => ul.append(el("li", null, b)));
+      a.append(ul);
+    }
+    if (p.metrics.length) {
+      const m = el("div", "metrics");
+      p.metrics.forEach(x => {
+        const s = el("span", "metric");
+        s.append(el("b", null, x.value), document.createTextNode(" " + x.label));
+        m.append(s);
+      });
+      a.append(m);
+    }
+    if (p.stack.length) {
+      const st = el("div", "stack");
+      p.stack.forEach(x => st.append(el("span", null, x)));
+      a.append(st);
+    }
+    if (hasPage(p)) {
+      const view = el("a", "p-view", "View project →");
+      view.href = "#project/" + encodeURIComponent(p.id);
+      a.append(view);
+    }
+    if (canEdit) {
+      a.append(editTools(data.projects, i, () =>
+        openForm("Edit project", projectFields(), projectToForm(p), v => {
+          data.projects[i] = { ...formToProject(v), id: p.id }; save();
+        }), "project"));
+    }
+    box.append(a);
+  });
+  if (canEdit) {
+    box.append(btn("+ Add project", "add-card", () =>
+      openForm("Add project", projectFields(), projectToForm(formToProject({
+        title: "", label: "", date: "", cats: [], wide: false, summary: "", bullets: "", metrics: "", stack: "",
+        cover: "", details: "", gallery: "", video: "", links: ""
+      })), v => { data.projects.unshift(formToProject(v)); save(); })));
+  }
+  applyFilter(currentFilter);
+}
+
+// ---------- project page ----------
+// only allow web links, mailto and paths inside the site (blocks javascript: and similar)
+function safeUrl(u) {
+  u = (u || "").trim();
+  if (!u) return "";
+  if (/^(https?:|mailto:)/i.test(u)) return u;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.startsWith("//")) return "";
+  return u;
+}
+function hasPage(p) {
+  return Boolean(p.details || p.gallery.length || p.video || p.links.length || p.cover);
+}
+function videoEmbed(url) {
+  url = safeUrl(url);
+  if (!url) return null;
+  let m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+  if (m) return { type: "iframe", src: "https://www.youtube-nocookie.com/embed/" + m[1] };
+  m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (m) return { type: "iframe", src: "https://player.vimeo.com/video/" + m[1] };
+  return { type: "video", src: url };
+}
+const VIDEO_FILE = /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i;
+// the project's cover: a picture, a video file, or a YouTube/Vimeo link
+function coverMedia(p, where) {
+  const src = safeUrl(p.cover);
+  if (!src) return null;
+  const onCard = where === "card";
+  const cls = onCard ? "p-cover" : "pp-hero-img";
+  const yt = src.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+  const vimeo = src.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (yt && onCard) {
+    // on the card, show YouTube's own thumbnail (light and fast) with a play badge
+    const wrap = el("div", "p-cover-wrap");
+    const img = el("img", cls);
+    img.src = "https://i.ytimg.com/vi/" + yt[1] + "/hqdefault.jpg"; img.alt = p.title; img.loading = "lazy";
+    wrap.append(img, el("span", "play-badge", "▶"));
+    return wrap;
+  }
+  if (yt || vimeo) {
+    const box = el("div", onCard ? "p-cover p-cover-frame" : "pp-video");
+    const f = el("iframe");
+    f.src = yt ? "https://www.youtube-nocookie.com/embed/" + yt[1]
+               : "https://player.vimeo.com/video/" + vimeo[1] + (onCard ? "?background=1" : "");
+    f.title = p.title + " video"; f.loading = "lazy"; f.allowFullscreen = true;
+    f.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    box.append(f);
+    return box;
+  }
+  if (VIDEO_FILE.test(src)) {
+    const vid = el("video", onCard ? cls : "pp-hero-img");
+    vid.src = src; vid.muted = true; vid.loop = true; vid.playsInline = true;
+    vid.setAttribute("muted", ""); vid.setAttribute("playsinline", "");
+    if (onCard) { vid.autoplay = true; vid.setAttribute("autoplay", ""); vid.preload = "metadata"; }
+    else { vid.controls = true; vid.preload = "metadata"; }
+    return vid;
+  }
+  const img = el("img", cls);
+  img.src = src; img.alt = p.title; img.loading = onCard ? "lazy" : "eager";
+  img.onerror = () => img.remove();
+  return img;
+}
+function currentProjectId() {
+  const m = location.hash.match(/^#project\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function renderProjectPage() {
+  const id = currentProjectId();
+  const page = document.getElementById("project-page");
+  if (!id) return;
+  page.textContent = "";
+  const i = data.projects.findIndex(p => p.id === id);
+  const back = el("a", "back", "← back to work");
+  back.href = "#work";
+  page.append(back);
+  if (i < 0) {
+    page.append(el("h1", "pp-title", "Project not found"), el("p", "pp-summary", "It may have been renamed or removed."));
+    return;
+  }
+  const p = data.projects[i];
+  document.title = p.title + " · Ekemini John";
+
+  const meta = el("div", "pp-meta");
+  meta.append(el("span", "p-cats", p.label), el("span", "p-date", p.date));
+  page.append(meta, el("h1", "pp-title", p.title));
+  if (p.summary) page.append(el("p", "pp-summary", p.summary));
+
+  if (p.links.length) {
+    const row = el("div", "pp-links");
+    p.links.forEach((l, k) => {
+      const href = safeUrl(l.url);
+      if (!href) return;
+      const a = el("a", "btn" + (k === 0 ? " solid" : ""), l.label || "Link");
+      a.href = href;
+      if (/^https?:/i.test(href)) { a.target = "_blank"; a.rel = "noopener"; }
+      row.append(a);
+    });
+    page.append(row);
+  }
+
+  const v = videoEmbed(p.video);
+  if (v) {
+    const box = el("div", "pp-video");
+    if (v.type === "iframe") {
+      const f = el("iframe");
+      f.src = v.src; f.title = p.title + " video"; f.loading = "lazy";
+      f.allow = "accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen";
+      f.referrerPolicy = "strict-origin-when-cross-origin";
+      f.allowFullscreen = true;
+      box.append(f);
+    } else {
+      const vid = el("video");
+      vid.src = v.src; vid.controls = true; vid.preload = "metadata";
+      box.append(vid);
+    }
+    page.append(box);
+  } else {
+    const cover = coverMedia(p, "page");
+    if (cover) page.append(cover);
+  }
+
+  const body = el("div", "pp-body");
+  const main = el("div", "pp-text");
+  if (p.details) {
+    p.details.split(/\n\s*\n/).map(x => x.trim()).filter(Boolean).forEach(para => {
+      const el_ = el("p"); rich(el_, para.replace(/\s*\n\s*/g, " ")); main.append(el_);
+    });
+  }
+  if (p.bullets.length) {
+    main.append(el("h2", "pp-h", "Highlights"));
+    const ul = el("ul");
+    p.bullets.forEach(b => ul.append(el("li", null, b)));
+    main.append(ul);
+  }
+  const side = el("aside", "pp-side");
+  if (p.metrics.length) {
+    const m = el("div", "metrics");
+    p.metrics.forEach(x => { const s = el("span", "metric"); s.append(el("b", null, x.value), document.createTextNode(" " + x.label)); m.append(s); });
+    side.append(el("span", "eyebrow", "Results"), m);
+  }
+  if (p.stack.length) {
+    const st = el("div", "stack");
+    p.stack.forEach(x => st.append(el("span", null, x)));
+    side.append(el("span", "eyebrow", "Built with"), st);
+  }
+  body.append(main, side);
+  page.append(body);
+
+  if (p.gallery.length) {
+    page.append(el("h2", "pp-h", "Gallery"));
+    const grid = el("div", "pp-gallery");
+    p.gallery.forEach(g => {
+      const src = safeUrl(g.src);
+      if (!src) return;
+      const fig = el("figure");
+      const a = el("a"); a.href = src; a.target = "_blank"; a.rel = "noopener";
+      const img = el("img"); img.src = src; img.alt = g.caption || p.title; img.loading = "lazy";
+      a.append(img); fig.append(a);
+      if (g.caption) fig.append(el("figcaption", null, g.caption));
+      grid.append(fig);
+    });
+    page.append(grid);
+  }
+
+  if (canEdit) {
+    page.append(editTools(data.projects, i, () =>
+      openForm("Edit project", projectFields(), projectToForm(p), v2 => {
+        data.projects[i] = { ...formToProject(v2), id: p.id }; save();
+      }), "project"));
+  }
+}
+
+// ---------- experience ----------
+function expFields() {
+  return [
+    { name: "when", label: "When", hint: "e.g. Summer 2026" },
+    { name: "title", label: "Role or title", required: true },
+    { name: "org", label: "Organisation", hint: "e.g. Company · City, ON" },
+    { name: "bullets", label: "Highlights", type: "textarea", rows: 4, hint: "One per line" }
+  ];
+}
+function renderExperience() {
+  const box = document.getElementById("timeline");
+  box.textContent = "";
+  data.experience.forEach((e, i) => {
+    const role = el("div", "role");
+    const body = el("div");
+    body.append(el("h3", null, e.title), el("div", "org", e.org));
+    if (e.bullets.length) {
+      const ul = el("ul");
+      e.bullets.forEach(b => ul.append(el("li", null, b)));
+      body.append(ul);
+    }
+    if (canEdit) {
+      body.append(editTools(data.experience, i, () =>
+        openForm("Edit experience", expFields(), { ...e, bullets: e.bullets.join("\n") }, v => {
+          data.experience[i] = { when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) };
+          save();
+        }), "experience"));
+    }
+    role.append(el("div", "when", e.when), body);
+    box.append(role);
+  });
+  if (canEdit) {
+    box.append(btn("+ Add experience", "add-card add-row", () =>
+      openForm("Add experience", expFields(), { when: "", title: "", org: "", bullets: "" }, v => {
+        data.experience.unshift({ when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) });
+        save();
+      })));
+  }
+}
+
+// ---------- stack ----------
+function renderSkills() {
+  const box = document.getElementById("skills");
+  box.textContent = "";
+  data.skills.forEach((g, gi) => {
+    const group = el("div", "skill-group");
+    const head = el("h3", null, g.group);
+    if (canEdit) {
+      head.append(btn("×", "chip-x", () => {
+        if (confirm("Delete the \"" + g.group + "\" group and its skills?")) { data.skills.splice(gi, 1); save(); }
+      }, "Delete group " + g.group));
+    }
+    const st = el("div", "stack");
+    g.items.forEach((item, ii) => {
+      const chip = el("span", null, item);
+      if (canEdit) chip.append(btn("×", "chip-x", () => { g.items.splice(ii, 1); save(); }, "Remove " + item));
+      st.append(chip);
+    });
+    if (canEdit) {
+      const form = el("form", "chip-add");
+      const input = el("input");
+      input.placeholder = "Add skill";
+      input.setAttribute("aria-label", "Add a skill to " + g.group);
+      const add = el("button", null, "+");
+      add.type = "submit";
+      add.setAttribute("aria-label", "Add skill");
+      form.append(input, add);
+      form.addEventListener("submit", ev => {
+        ev.preventDefault();
+        const names = input.value.split(",").map(s => s.trim()).filter(Boolean);
+        if (!names.length) return;
+        g.items.push(...names);
+        save();
+      });
+      st.append(form);
+    }
+    group.append(head, st);
+    box.append(group);
+  });
+  if (canEdit) {
+    box.append(btn("+ Add group", "add-card", () =>
+      openForm("Add skill group", [
+        { name: "group", label: "Group name", required: true, hint: "e.g. Cloud" },
+        { name: "items", label: "Skills", hint: "Comma separated" }
+      ], { group: "", items: "" }, v => {
+        data.skills.push({ group: v.group.trim(), items: v.items.split(",").map(s => s.trim()).filter(Boolean) });
+        save();
+      })));
+  }
+}
+
+// ---------- text sections (intro, numbers, right now, about) ----------
+// {status} / {Status} become your current status; **word** becomes bold
+function fillTokens(text) {
+  const st = statusText();
+  return text.replace(/\{Status\}/g, st).replace(/\{status\}/g, st.charAt(0).toLowerCase() + st.slice(1));
+}
+function rich(target, text) {
+  target.textContent = "";
+  fillTokens(text).split("**").forEach((part, i) => {
+    if (!part) return;
+    target.append(i % 2 ? el("strong", null, part) : document.createTextNode(part));
+  });
+}
+function pairsToText(list, a, b) { return list.map(x => x[a] + " | " + x[b]).join("\n"); }
+function textToPairs(text, a, b) {
+  return lines(text).map(l => {
+    const [first, ...rest] = l.split("|");
+    return { [a]: first.trim(), [b]: rest.join("|").trim() };
+  });
+}
+function slotButton(slotId, label, onClick) {
+  const slot = document.getElementById(slotId);
+  slot.textContent = "";
+  if (canEdit) slot.append(btn(label, "tool", onClick));
+}
+const TOKEN_HINT = "Use **double stars** for bold. {status} inserts your current status.";
+
+function renderIntro() {
+  rich(document.getElementById("lede"), data.intro);
+  slotButton("slot-intro", "Edit intro", () =>
+    openForm("Edit intro", [
+      { name: "intro", label: "Intro", type: "textarea", rows: 5, required: true, hint: TOKEN_HINT }
+    ], { intro: data.intro }, v => { data.intro = v.intro.trim(); save(); }));
+}
+function renderFacts() {
+  const box = document.getElementById("facts");
+  box.textContent = "";
+  data.facts.forEach(f => {
+    const d = el("div", "fact");
+    d.append(el("b", null, f.value.toLowerCase() === "auto" ? String(data.projects.length) : f.value), el("span", null, f.label));
+    box.append(d);
+  });
+  slotButton("slot-facts", "Edit numbers", () =>
+    openForm("Edit numbers", [
+      { name: "facts", label: "Numbers", type: "textarea", rows: 5,
+        hint: "One per line, as number | label. Write auto as the number to count your projects automatically." }
+    ], { facts: pairsToText(data.facts, "value", "label") }, v => { data.facts = textToPairs(v.facts, "value", "label"); save(); }));
+}
+function renderNow() {
+  // "auto" shows the current month and year, e.g. November 2026
+  document.getElementById("now-eyebrow").textContent = data.now.eyebrow.toLowerCase() === "auto"
+    ? new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : data.now.eyebrow;
+  const box = document.getElementById("now-list");
+  box.textContent = "";
+  data.now.items.forEach(n => {
+    const d = el("div", "now-item");
+    const p = el("p");
+    rich(p, n.text);
+    d.append(el("span", "eyebrow", n.label), p);
+    box.append(d);
+  });
+  slotButton("slot-now", "Edit right now", () =>
+    openForm("Edit right now", [
+      { name: "eyebrow", label: "Date label", hint: "Write auto to show the current month and year automatically, or type your own, e.g. Fall 2026" },
+      { name: "items", label: "Items", type: "textarea", rows: 5, hint: "One per line, as label | text. " + TOKEN_HINT }
+    ], { eyebrow: data.now.eyebrow, items: pairsToText(data.now.items, "label", "text") }, v => {
+      data.now = { eyebrow: v.eyebrow.trim(), items: textToPairs(v.items, "label", "text") };
+      save();
+    }));
+}
+function renderAbout() {
+  const a = data.about;
+  document.getElementById("about-title").textContent = a.title;
+  const story = document.getElementById("story");
+  story.textContent = "";
+  a.story.forEach((para, i) => { const p = el("p", i === 0 ? "big" : null); rich(p, para); story.append(p); });
+  slotButton("slot-story", "Edit story", () =>
+    openForm("Edit about story", [
+      { name: "title", label: "Heading" },
+      { name: "story", label: "Story", type: "textarea", rows: 10,
+        hint: "Leave a blank line between paragraphs. The first paragraph shows larger. " + TOKEN_HINT }
+    ], { title: a.title, story: a.story.join("\n\n") }, v => {
+      a.title = v.title.trim();
+      a.story = v.story.split(/\n\s*\n/).map(x => x.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean);
+      save();
+    }));
+
+  const dl = document.getElementById("about-facts");
+  dl.textContent = "";
+  a.facts.forEach(f => {
+    const row = el("div", "row");
+    row.append(el("dt", null, f.label), el("dd", null, f.value.toLowerCase() === "auto" ? statusText() : f.value));
+    dl.append(row);
+  });
+  slotButton("slot-about-facts", "Edit quick facts", () =>
+    openForm("Edit quick facts", [
+      { name: "facts", label: "Quick facts", type: "textarea", rows: 9,
+        hint: "One per line, as label | value. Write auto as the value to show your current status." }
+    ], { facts: pairsToText(a.facts, "label", "value") }, v => { a.facts = textToPairs(v.facts, "label", "value"); save(); }));
+
+  const values = document.getElementById("values");
+  values.textContent = "";
+  a.values.forEach(v => { const d = el("div", "value"); d.append(el("h3", null, v.title), el("p", null, v.text)); values.append(d); });
+  slotButton("slot-values", "Edit how I work", () =>
+    openForm("Edit how I work", [
+      { name: "values", label: "Points", type: "textarea", rows: 6, hint: "One per line, as title | text" }
+    ], { values: pairsToText(a.values, "title", "text") }, v => { a.values = textToPairs(v.values, "title", "text"); save(); }));
+
+  const interests = document.getElementById("interests");
+  interests.textContent = "";
+  a.interests.forEach(v => { const d = el("div", "interest"); d.append(el("span", "eyebrow", v.label), el("p", null, v.text)); interests.append(d); });
+  slotButton("slot-interests", "Edit beyond code", () =>
+    openForm("Edit beyond code", [
+      { name: "interests", label: "Interests", type: "textarea", rows: 7, hint: "One per line, as label | text" }
+    ], { interests: pairsToText(a.interests, "label", "text") }, v => { a.interests = textToPairs(v.interests, "label", "text"); save(); }));
+}
+
+// ---------- filters ----------
+function categoryKey(label) {
+  const base = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "filter";
+  let key = base, n = 2;
+  while (key === "all" || data.categories.some(c => c.key === key)) key = base + "-" + n++;
+  return key;
+}
+function renderFilters() {
+  const box = document.getElementById("filters");
+  box.textContent = "";
+  const all = [{ key: "all", label: "All" }, ...data.categories];
+  all.forEach(c => {
+    const b = el("button", "filter", c.label);
+    b.type = "button";
+    b.dataset.filter = c.key;
+    b.addEventListener("click", () => applyFilter(c.key));
+    if (canEdit && c.key !== "all") {
+      const wrap = el("span", "filter-wrap");
+      wrap.append(b, btn("×", "chip-x", () => {
+        const used = data.projects.filter(p => p.cats.includes(c.key)).length;
+        const note = used ? " It will be removed from " + used + " project" + (used > 1 ? "s" : "") + "; the projects stay." : "";
+        if (!confirm("Delete the \"" + c.label + "\" filter?" + note)) return;
+        data.categories = data.categories.filter(k => k.key !== c.key);
+        data.projects.forEach(p => { p.cats = p.cats.filter(k => k !== c.key); });
+        if (currentFilter === c.key) currentFilter = "all";
+        save();
+      }, "Delete filter " + c.label));
+      box.append(wrap);
+    } else {
+      box.append(b);
+    }
+  });
+  if (canEdit) {
+    box.append(btn("+ Add filter", "filter add-filter", () =>
+      openForm("Add filter", [
+        { name: "label", label: "Filter name", required: true, hint: "e.g. Mobile, Data Analysis, Game Dev" }
+      ], { label: "" }, v => {
+        const label = v.label.trim();
+        if (!label) return;
+        if (data.categories.some(c => c.label.toLowerCase() === label.toLowerCase())) { toast("That filter already exists"); return; }
+        data.categories.push({ key: categoryKey(label), label });
+        save();
+      })));
+  }
+}
+function applyFilter(f) {
+  if (f !== "all" && !data.categories.some(c => c.key === f)) f = "all";
+  currentFilter = f;
+  document.querySelectorAll(".filter").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === f)));
+  document.querySelectorAll("#projects .project").forEach(c => {
+    const cats = (c.dataset.cats || "").split(" ");
+    c.hidden = !(f === "all" || cats.includes(f));
+  });
+}
+
+function ensureProjectIds() {
+  const used = new Set();
+  data.projects.forEach(p => {
+    let id = p.id;
+    if (!id) {
+      id = p.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project";
+      if (id.length > 40) id = id.slice(0, 40).replace(/-[^-]*$/, "");  // keep page addresses short
+    }
+    let base = id, n = 2;
+    while (used.has(id)) id = base + "-" + n++;
+    p.id = id; used.add(id);
+  });
+}
+function renderAll() {
+  ensureProjectIds();
+  renderStatus();
+  renderIntro();
+  renderFilters();
+  renderProjects();
+  renderFacts();
+  renderNow();
+  renderAbout();
+  renderExperience();
+  renderSkills();
+  renderProjectPage();
+}
+
+// ---------- form dialog ----------
+function openForm(title, fields, values, onSave) {
+  const dlg = document.getElementById("editor");
+  const form = document.getElementById("editor-form");
+  document.getElementById("editor-title").textContent = title;
+  const body = document.getElementById("editor-fields");
+  body.textContent = "";
+  fields.forEach(f => {
+    const wrap = el("div", "field");
+    const id = "f-" + f.name;
+    if (f.type === "checkbox") {
+      const lab = el("label", "check");
+      const input = el("input");
+      input.type = "checkbox"; input.name = f.name; input.checked = Boolean(values[f.name]);
+      lab.append(input, document.createTextNode(" " + f.label));
+      wrap.append(lab);
+    } else if (f.type === "checks") {
+      const fs = el("fieldset", "checks");
+      fs.append(el("legend", null, f.label));
+      f.options.forEach(o => {
+        const lab = el("label", "check");
+        const input = el("input");
+        input.type = "checkbox"; input.name = f.name; input.value = o.key;
+        input.checked = arr(values[f.name]).includes(o.key);
+        lab.append(input, document.createTextNode(" " + o.label));
+        fs.append(lab);
+      });
+      if (!f.options.length) fs.append(el("small", null, "No filters yet."));
+      wrap.append(fs);
+      if (f.hint) wrap.append(el("small", null, f.hint));
+    } else {
+      const lab = el("label", null, f.label);
+      lab.htmlFor = id;
+      const input = el(f.type === "textarea" ? "textarea" : "input");
+      input.id = id; input.name = f.name; input.value = values[f.name] || "";
+      if (f.rows) input.rows = f.rows;
+      if (f.required) input.required = true;
+      wrap.append(lab, input);
+      if (f.hint) wrap.append(el("small", null, f.hint));
+    }
+    body.append(wrap);
+  });
+
+  form.onsubmit = ev => {
+    ev.preventDefault();
+    const v = {};
+    fields.forEach(f => {
+      if (f.type === "checkbox") v[f.name] = form.elements[f.name].checked;
+      else if (f.type === "checks") v[f.name] = [...form.querySelectorAll("input[name='" + f.name + "']:checked")].map(i => i.value);
+      else v[f.name] = form.elements[f.name].value;
+    });
+    dlg.close();
+    onSave(v);
+  };
+  document.getElementById("editor-cancel").onclick = () => dlg.close();
+  dlg.showModal();
+  const first = body.querySelector("input:not([type=checkbox]), textarea");
+  if (first) first.focus();
+}
+
+// ---------- edit bar ----------
+function setEditMode(on, label, onSignOut) {
+  canEdit = on;
+  document.body.classList.toggle("editing", on);
+  const bar = document.getElementById("edit-bar");
+  bar.textContent = "";
+  bar.hidden = !on;
+  if (on) {
+    bar.append(el("span", "edit-dot"), el("span", null, label));
+    if (onSignOut) bar.append(btn("Sign out", "tool", onSignOut));
+  }
+  renderAll();
+}
+function showSignIn(onClick) {
+  const bar = document.getElementById("edit-bar");
+  bar.textContent = "";
+  bar.hidden = false;
+  bar.append(btn("Sign in to edit", "tool", onClick));
+}
+
+// ---------- storage: Firebase (live) or this browser (preview) ----------
+async function startFirebase() {
+  const v = "13.2.0";
+  const [appMod, authMod, fsMod] = await Promise.all([
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-app.js`),
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-auth.js`),
+    import(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore.js`)
+  ]);
+  const app = appMod.initializeApp(firebaseConfig);
+  const auth = authMod.getAuth(app);
+  const db = fsMod.getFirestore(app);
+  const ref = fsMod.doc(db, "portfolio", "main");
+
+  try {
+    const snap = await fsMod.getDoc(ref);
+    if (snap.exists()) { data = normalize(snap.data()); renderAll(); }
+  } catch (err) {
+    console.warn("Couldn't load saved portfolio, showing defaults:", err);
+  }
+  store = { save: d => fsMod.setDoc(ref, d) };
+
+  authMod.onAuthStateChanged(auth, user => {
+    if (user && OWNER_UID && user.uid === OWNER_UID) {
+      setEditMode(true, "Editing", () => authMod.signOut(auth));
+      return;
+    }
+    setEditMode(false);
+    if (user && !OWNER_UID) {
+      const bar = document.getElementById("edit-bar");
+      bar.textContent = "";
+      bar.hidden = false;
+      bar.append(el("span", null, "Your user ID: "), el("code", null, user.uid),
+        btn("Copy", "tool", () => navigator.clipboard && navigator.clipboard.writeText(user.uid)));
+    } else if (user) {
+      toast("This account can't edit this portfolio.");
+      authMod.signOut(auth);
+    } else if (wantsAdmin) {
+      showSignIn(() => authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider())
+        .catch(err => toast("Sign-in failed: " + err.message)));
+    }
+  });
+}
+
+function startPreview() {
+  // Firebase not set up yet: ?admin edits are kept only in this browser
+  try {
+    const saved = localStorage.getItem(LOCAL_KEY);
+    if (saved) data = normalize(JSON.parse(saved));
+  } catch (err) { /* storage unavailable: use defaults */ }
+  store = {
+    save: async d => { localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); }
+  };
+  setEditMode(true, "Preview: saved in this browser only");
+}
+
+renderAll();
+if (configured) {
+  startFirebase().catch(err => console.warn("Firebase didn't start:", err));
+} else if (wantsAdmin) {
+  startPreview();
+}
+
+// ---------- page routing (About view) ----------
+const home = document.getElementById("top");
+const about = document.getElementById("about-view");
+const projectView = document.getElementById("project-view");
+const baseTitle = document.title;
+function route() {
+  const showAbout = location.hash === "#about";
+  const showProject = Boolean(currentProjectId());
+  home.hidden = showAbout || showProject;
+  about.hidden = !showAbout;
+  projectView.hidden = !showProject;
+  if (showProject) { renderProjectPage(); window.scrollTo(0, 0); return; }
+  document.title = baseTitle;
+  if (showAbout) { window.scrollTo(0, 0); return; }
+  if (location.hash && location.hash !== "#top") {
+    let target = null;
+    try { target = document.querySelector(location.hash); } catch (e) { /* not a section id */ }
+    if (target) target.scrollIntoView();
+  } else if (location.hash === "#top") { window.scrollTo(0, 0); }
+}
+window.addEventListener("hashchange", route);
+route();
+
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// ---------- copy email ----------
+document.querySelectorAll(".email-group").forEach(group => {
+  const copyBtn = group.querySelector(".copy");
+  const email = group.querySelector(".v");
+  copyBtn.addEventListener("click", () => {
+    const text = email.textContent.trim();
+    const done = () => { copyBtn.textContent = "Copied"; setTimeout(() => { copyBtn.textContent = "Copy"; }, 1600); };
+    const fallback = () => {
+      const r = document.createRange(); r.selectNodeContents(email);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      copyBtn.textContent = "Selected";
+      setTimeout(() => { copyBtn.textContent = "Copy"; }, 1600);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  });
+});
+</script>
+
+</body></html>
