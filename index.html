@@ -355,6 +355,14 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
   .skills { grid-template-columns: minmax(0, 1fr); }
 }
 
+
+/* while the saved content loads, fade the changeable parts instead of showing old text */
+.loading-content #top .hero, .loading-content #projects, .loading-content #facts, .loading-content #now-list,
+.loading-content #timeline, .loading-content #skills, .loading-content #about-view, .loading-content #project-view { opacity: 0; }
+#top .hero, #projects, #facts, #now-list, #timeline, #skills, #about-view, #project-view { transition: opacity .25s ease; }
+.sync { font-size: 11.5px; color: var(--muted); }
+.sync.ok { color: #2e9e5b; }
+.sync.bad { color: #c0392b; font-weight: 600; }
 /* ---------- edit mode (only visible to you) ---------- */
 #slot-location { display: inline-flex; gap: 6px; margin: 0 0 0 10px; vertical-align: middle; }
 .edit-slot:empty { display: none; }
@@ -1233,24 +1241,48 @@ function move(list, i, dir) {
 }
 
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms) {
+  toast.ms = ms;
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  toastTimer = setTimeout(() => { t.hidden = true; }, toast.ms || 2600);
 }
 
 async function save() {
   renderAll();
   if (!store) return;
+  setSyncState("saving");
   try {
     await store.save(clone(data));
-    toast("Saved");
+    setSyncState("saved");
+    toast("Saved: live for everyone");
   } catch (err) {
     console.error(err);
-    toast("Couldn't save: " + (err.message || err));
+    setSyncState("failed");
+    const denied = /permission|insufficient/i.test(err.message || "");
+    toast(denied
+      ? "NOT saved: Firestore rules refused it. Visitors still see the old version."
+      : "NOT saved: " + (err.message || err) + ". Visitors still see the old version.", 7000);
+    // show what is really saved, so this screen never pretends the change went live
+    // (if nothing is saved, or it can't be read, visitors see the built-in content, so show that)
+    if (store.load) {
+      let fresh = null;
+      try { fresh = await store.load(); } catch (e) { /* unreadable: visitors get the built-in content */ }
+      data = fresh || normalize(clone(DEFAULT_DATA));
+      renderAll();
+      setSyncState("failed");
+    }
   }
+}
+// small status next to "Editing" in the edit bar
+function setSyncState(state) {
+  const s = document.getElementById("sync-state");
+  if (!s) return;
+  const map = { saving: ["Saving…", ""], saved: ["All changes live", "ok"], failed: ["Last change NOT saved", "bad"] };
+  s.textContent = map[state][0];
+  s.className = "sync " + map[state][1];
 }
 
 // ---------- status ----------
@@ -1992,6 +2024,7 @@ function setEditMode(on, label, onSignOut) {
   bar.hidden = !on;
   if (on) {
     bar.append(el("span", "edit-dot"), el("span", null, label));
+    const sync = el("span", "sync", ""); sync.id = "sync-state"; bar.append(sync);
     if (onSignOut) bar.append(btn("Sign out", "tool", onSignOut));
   }
   renderAll();
@@ -2016,13 +2049,24 @@ async function startFirebase() {
   const db = fsMod.getFirestore(app);
   const ref = fsMod.doc(db, "portfolio", "main");
 
+  // always ask the server (not a cached copy), so every device shows the same saved version
+  async function load() {
+    const snap = await fsMod.getDocFromServer(ref);
+    return snap.exists() ? normalize(snap.data()) : null;
+  }
   try {
-    const snap = await fsMod.getDoc(ref);
-    if (snap.exists()) { data = normalize(snap.data()); renderAll(); }
+    const fresh = await load();
+    if (fresh) { data = fresh; renderAll(); }
   } catch (err) {
     console.warn("Couldn't load saved portfolio, showing defaults:", err);
   }
-  store = { save: d => fsMod.setDoc(ref, d) };
+  showContent();
+  store = { save: d => fsMod.setDoc(ref, d), load };
+  // when you come back to the tab (e.g. phone was in your pocket), fetch the latest again
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || canEdit) return;
+    try { const fresh = await load(); if (fresh) { data = fresh; renderAll(); } } catch (e) { /* keep current */ }
+  });
 
   authMod.onAuthStateChanged(auth, user => {
     if (user && OWNER_UID && user.uid === OWNER_UID) {
@@ -2064,9 +2108,13 @@ function startPreview() {
   setEditMode(true, "Preview: saved in this browser only");
 }
 
+// hide the content until the saved version arrives (max 3 seconds), so nobody sees an old flash
+function showContent() { document.documentElement.classList.remove("loading-content"); }
 renderAll();
 if (configured) {
-  startFirebase().catch(err => console.warn("Firebase didn't start:", err));
+  document.documentElement.classList.add("loading-content");
+  setTimeout(showContent, 3000);
+  startFirebase().catch(err => { console.warn("Firebase didn't start:", err); showContent(); });
 } else if (wantsAdmin) {
   startPreview();
 }
