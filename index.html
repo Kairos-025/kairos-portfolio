@@ -634,6 +634,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
   </form>
 </dialog>
 <div id="edit-bar" class="edit-bar" hidden></div>
+<input type="file" id="restore-file" accept="application/json,.json" hidden>
 <div id="toast" class="toast" role="status" hidden></div>
 <script type="module">
 // =====================================================================
@@ -1276,6 +1277,46 @@ async function save() {
     }
   }
 }
+// ---------- undo, backup, restore ----------
+async function undoLastSave() {
+  if (!store || !store.undo) return;
+  if (!confirm("Undo your last save?\nThe site goes back to how it was before it. (Press Undo again to redo.)")) return;
+  setSyncState("saving");
+  try {
+    const prev = await store.undo();
+    if (!prev) { setSyncState("saved"); toast("Nothing to undo yet"); return; }
+    data = prev; renderAll();
+    setSyncState("saved");
+    toast("Undone: previous version is live");
+  } catch (err) {
+    console.error(err);
+    setSyncState("failed");
+    toast("Couldn't undo: " + (err.message || err), 7000);
+  }
+}
+function downloadBackup() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify({ portfolioBackup: 1, savedAt: new Date().toISOString(), content: data }, null, 2)],
+    { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "portfolio-backup-" + stamp + ".json";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast("Backup downloaded");
+}
+async function restoreFromFile(file) {
+  if (!file) return;
+  let parsed;
+  try { parsed = JSON.parse(await file.text()); } catch (e) { toast("That file isn't a portfolio backup", 5000); return; }
+  const content = parsed && parsed.portfolioBackup ? parsed.content : parsed;
+  if (!content || !Array.isArray(content.projects)) { toast("That file isn't a portfolio backup", 5000); return; }
+  const when = parsed.savedAt ? " from " + new Date(parsed.savedAt).toLocaleString() : "";
+  if (!confirm("Replace everything on your portfolio with this backup" + when + "?\n(You can press Undo afterwards if needed.)")) return;
+  data = normalize(content);
+  await save();   // save() keeps the current version as "previous", so a restore can be undone too
+}
+
 // small status next to "Editing" in the edit bar
 function setSyncState(state) {
   const s = document.getElementById("sync-state");
@@ -2025,6 +2066,11 @@ function setEditMode(on, label, onSignOut) {
   if (on) {
     bar.append(el("span", "edit-dot"), el("span", null, label));
     const sync = el("span", "sync", ""); sync.id = "sync-state"; bar.append(sync);
+    bar.append(
+      btn("Undo", "tool", undoLastSave, "Undo your last save"),
+      btn("Backup", "tool", downloadBackup, "Download a backup file of all your content"),
+      btn("Restore", "tool", () => document.getElementById("restore-file").click(), "Restore from a backup file")
+    );
     if (onSignOut) bar.append(btn("Sign out", "tool", onSignOut));
   }
   renderAll();
@@ -2054,14 +2100,37 @@ async function startFirebase() {
     const snap = await fsMod.getDocFromServer(ref);
     return snap.exists() ? normalize(snap.data()) : null;
   }
+  const prevRef = fsMod.doc(db, "portfolio", "previous");   // the version before your last save
+  let lastSaved = null;                                       // what is currently live
   try {
-    const fresh = await load();
-    if (fresh) { data = fresh; renderAll(); }
+    const snap = await fsMod.getDocFromServer(ref);
+    if (snap.exists()) { lastSaved = snap.data(); data = normalize(lastSaved); renderAll(); }
   } catch (err) {
     console.warn("Couldn't load saved portfolio, showing defaults:", err);
   }
   showContent();
-  store = { save: d => fsMod.setDoc(ref, d), load };
+  store = {
+    load,
+    // before saving, keep what was live as "previous", so one save can always be undone
+    async save(d) {
+      const before = lastSaved || clone(DEFAULT_DATA);
+      await fsMod.setDoc(prevRef, { ...before, backupAt: new Date().toISOString() });
+      await fsMod.setDoc(ref, d);
+      lastSaved = clone(d);
+    },
+    // swap live and previous: undo puts the previous version back (and pressing again redoes)
+    async undo() {
+      const snap = await fsMod.getDocFromServer(prevRef);
+      if (!snap.exists()) return null;
+      const prev = snap.data();
+      delete prev.backupAt;
+      const current = lastSaved || clone(DEFAULT_DATA);
+      await fsMod.setDoc(prevRef, { ...current, backupAt: new Date().toISOString() });
+      await fsMod.setDoc(ref, prev);
+      lastSaved = prev;
+      return normalize(prev);
+    }
+  };
   // when you come back to the tab (e.g. phone was in your pocket), fetch the latest again
   document.addEventListener("visibilitychange", async () => {
     if (document.visibilityState !== "visible" || canEdit) return;
@@ -2103,11 +2172,26 @@ function startPreview() {
     if (saved) data = normalize(JSON.parse(saved));
   } catch (err) { /* storage unavailable: use defaults */ }
   store = {
-    save: async d => { localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); }
+    async save(d) {
+      const before = localStorage.getItem(LOCAL_KEY) || JSON.stringify(DEFAULT_DATA);
+      localStorage.setItem(LOCAL_KEY + "-previous", before);
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(d));
+    },
+    async undo() {
+      const prev = localStorage.getItem(LOCAL_KEY + "-previous");
+      if (!prev) return null;
+      localStorage.setItem(LOCAL_KEY + "-previous", localStorage.getItem(LOCAL_KEY) || JSON.stringify(DEFAULT_DATA));
+      localStorage.setItem(LOCAL_KEY, prev);
+      return normalize(JSON.parse(prev));
+    }
   };
   setEditMode(true, "Preview: saved in this browser only");
 }
 
+document.getElementById("restore-file").addEventListener("change", e => {
+  restoreFromFile(e.target.files[0]);
+  e.target.value = "";
+});
 // hide the content until the saved version arrives (max 3 seconds), so nobody sees an old flash
 function showContent() { document.documentElement.classList.remove("loading-content"); }
 renderAll();
