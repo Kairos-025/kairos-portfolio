@@ -439,7 +439,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 
 
 /* ---------- project media + project page ---------- */
-.p-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 10px; border: 1px solid var(--line); background: var(--chip); }
+.p-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: var(--chip); }
 .p-cover-wrap { position: relative; }
 .p-cover-wrap .p-cover { display: block; }
 .play-badge { position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.6); color: #fff; font-size: 20px; padding-left: 4px; pointer-events: none; }
@@ -455,7 +455,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 .pp-video, .pp-hero-img { margin-top: 36px; width: 100%; border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden; background: #000; }
 .pp-video { aspect-ratio: 16 / 9; }
 .pp-video iframe, .pp-video video { width: 100%; height: 100%; border: 0; display: block; }
-.pp-hero-img { display: block; aspect-ratio: 16 / 9; object-fit: contain; }
+.pp-hero-img { display: block; aspect-ratio: 16 / 9; object-fit: cover; }
 .pp-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; margin-top: 40px; align-items: start; }
 .pp-text { display: grid; gap: 16px; font-size: 17px; max-width: 66ch; }
 .pp-text p { margin: 0; }
@@ -465,7 +465,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 .pp-side .eyebrow + * { margin-bottom: 8px; }
 .pp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
 .pp-gallery figure { margin: 0; }
-.pp-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 10px; border: 1px solid var(--line); display: block; }
+.pp-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
 .pp-gallery figcaption { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
 .project-page .edit-tools { margin-top: 32px; }
 @media (max-width: 860px) { .pp-body { grid-template-columns: minmax(0, 1fr); } }
