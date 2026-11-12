@@ -272,6 +272,14 @@ h2 {
 .skill-group { min-width: 0; }
 .skill-group h3 { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; }
 .skill-group .stack span { color: var(--fg); font-size: 12.5px; padding: 5px 11px; }
+.skill-group .stack span.strong { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); font-weight: 500; }
+.skill-group .stack span.strong .chip-x, .skill-group .stack span.strong .chip-star { color: var(--invert-fg); }
+.chip-star { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; line-height: 1; padding: 0 0 0 6px; }
+.chip-star:hover { color: var(--fg); }
+.strong-key { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.strong-key i { width: 14px; height: 14px; border-radius: 999px; background: var(--invert-bg); display: inline-block; }
+.ticker-track span { opacity: 0.55; }
+.ticker-track span.strong { opacity: 1; font-weight: 600; }
 
 /* contact */
 .contact {
@@ -521,10 +529,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
   </div>
 
   <div class="ticker" aria-hidden="true">
-    <div class="ticker-track">
-      <span>Python</span><span>Java</span><span>C/C++</span><span>React</span><span>SQL</span><span>scikit-learn</span><span>LLMs + RAG</span><span>OpenGL</span><span>Linux</span><span>Git</span><span>Firebase</span>
-      <span>Python</span><span>Java</span><span>C/C++</span><span>React</span><span>SQL</span><span>scikit-learn</span><span>LLMs + RAG</span><span>OpenGL</span><span>Linux</span><span>Git</span><span>Firebase</span>
-    </div>
+    <div class="ticker-track" id="ticker-track"></div>
   </div>
 
   <section>
@@ -572,7 +577,7 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 
   <section id="stack">
     <div class="wrap">
-      <div class="section-head"><h2>Stack</h2></div>
+      <div class="section-head"><h2>Stack</h2><span class="strong-key" id="strong-key" hidden><i></i>Strongest</span></div>
       <div class="skills" id="skills"></div>
     </div>
   </section>
@@ -1236,6 +1241,7 @@ function normalize(d) {
     })),
     ...splitCertificates(d),
     skills: arr(d.skills).map(g => ({ group: str(g.group), items: arr(g.items).map(str).filter(Boolean) })),
+    strong: arr(d.strong).map(str).filter(Boolean),   // skills you marked as your strongest
     intro: typeof d.intro === "string" ? d.intro : DEFAULT_DATA.intro,
     location: typeof d.location === "string" && d.location ? d.location : "Windsor, ON",
     facts: (Array.isArray(d.facts) ? d.facts : DEFAULT_DATA.facts).map(f => ({ value: str(f.value), label: str(f.label) })),
@@ -1808,6 +1814,19 @@ function renderTimeline(list, boxId, what, fields) {
       })));
   }
 }
+// ---------- ticker ----------
+// the scrolling strip shows every skill from your Stack section, so it updates when the Stack does
+function renderTicker() {
+  const track = document.getElementById("ticker-track");
+  const all = [...new Set(data.skills.flatMap(g => g.items))];
+  const items = [...all.filter(isStrong), ...all.filter(t => !isStrong(t))];   // strongest first
+  track.textContent = "";
+  track.parentElement.hidden = !items.length;
+  // the list is shown twice in a row so the loop is seamless
+  for (let r = 0; r < 2; r++) items.forEach(t => track.append(el("span", isStrong(t) ? "strong" : null, t)));
+  // keep the same scrolling speed however many skills there are (about 3s per skill)
+  track.style.animationDuration = Math.max(20, items.length * 3) + "s";
+}
 function renderExperience() { renderTimeline(data.experience, "timeline", "experience", expFields); }
 function eduFields() {
   return [
@@ -1864,7 +1883,15 @@ function renderCertificates() {
 }
 
 // ---------- stack ----------
+function isStrong(name) { return data.strong.some(s => s.toLowerCase() === name.toLowerCase()); }
+function toggleStrong(name) {
+  data.strong = isStrong(name)
+    ? data.strong.filter(s => s.toLowerCase() !== name.toLowerCase())
+    : [...data.strong, name];
+  save();
+}
 function renderSkills() {
+  document.getElementById("strong-key").hidden = !data.strong.length;
   const box = document.getElementById("skills");
   box.textContent = "";
   data.skills.forEach((g, gi) => {
@@ -1876,9 +1903,21 @@ function renderSkills() {
       }, "Delete group " + g.group));
     }
     const st = el("div", "stack");
-    g.items.forEach((item, ii) => {
-      const chip = el("span", null, item);
-      if (canEdit) chip.append(btn("×", "chip-x", () => { g.items.splice(ii, 1); save(); }, "Remove " + item));
+    // strongest skills first (visitors see them filled in)
+    const order = g.items.map((item, ii) => ({ item, ii }))
+      .sort((a, b) => isStrong(b.item) - isStrong(a.item));
+    order.forEach(({ item, ii }) => {
+      const strong = isStrong(item);
+      const chip = el("span", strong ? "strong" : null, item);
+      if (canEdit) {
+        chip.append(btn(strong ? "★" : "☆", "chip-star", () => toggleStrong(item),
+          (strong ? "Unmark " : "Mark ") + item + " as a strongest skill"));
+        chip.append(btn("×", "chip-x", () => {
+          g.items.splice(ii, 1);
+          data.strong = data.strong.filter(s => s.toLowerCase() !== item.toLowerCase());
+          save();
+        }, "Remove " + item));
+      }
       st.append(chip);
     });
     if (canEdit) {
@@ -2159,6 +2198,7 @@ function renderAll() {
   renderEducation();
   renderCertificates();
   renderSkills();
+  renderTicker();
   renderProjectPage();
   renderLocation();
 }
