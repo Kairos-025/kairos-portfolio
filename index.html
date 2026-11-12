@@ -370,8 +370,8 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 
 /* while the saved content loads, fade the changeable parts instead of showing old text */
 .loading-content #top .hero, .loading-content #projects, .loading-content #facts, .loading-content #now-list,
-.loading-content #timeline, .loading-content #certs, .loading-content #skills, .loading-content #about-view, .loading-content #project-view { opacity: 0; }
-#top .hero, #projects, #facts, #now-list, #timeline, #certs, #skills, #about-view, #project-view { transition: opacity .25s ease; }
+.loading-content #timeline, .loading-content #edu-timeline, .loading-content #certs, .loading-content #skills, .loading-content #about-view, .loading-content #project-view { opacity: 0; }
+#top .hero, #projects, #facts, #now-list, #timeline, #edu-timeline, #certs, #skills, #about-view, #project-view { transition: opacity .25s ease; }
 .sync { font-size: 11.5px; color: var(--muted); }
 .sync.ok { color: #2e9e5b; }
 .sync.bad { color: #c0392b; font-weight: 600; }
@@ -553,6 +553,13 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
     <div class="wrap">
       <div class="section-head"><h2>Experience</h2></div>
       <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <section id="education">
+    <div class="wrap">
+      <div class="section-head"><h2>Education</h2></div>
+      <div class="timeline" id="edu-timeline"></div>
     </div>
   </section>
 
@@ -986,7 +993,9 @@ const DEFAULT_DATA = {
         "Maintained a 98% safety compliance rate in hazardous environments",
         "Helped onboard 2 new employees on equipment operation and safety protocols"
       ]
-    },
+    }
+  ],
+  "education": [
     {
       "when": "2023 – 2028",
       "title": "B.Sc. Honours, Computer Science Co-op",
@@ -1266,8 +1275,20 @@ function splitCertificates(d) {
   experience.forEach(e => {   // drop the old "Certificate: ..." line from education, if it was added
     e.bullets = e.bullets.filter(b => !/^certificate:/i.test(b));
   });
+  let education;
+  if (Array.isArray(d.education)) {
+    education = d.education.map(e => ({
+      when: str(e.when), title: str(e.title), org: str(e.org), bullets: arr(e.bullets).map(str).filter(Boolean)
+    }));
+  } else {
+    // older saved data kept degrees under Experience: move them over once
+    const isEdu = e => /\b(B\.?\s?Sc|B\.?\s?A|B\.?\s?Eng|M\.?\s?Sc|Bachelor|Master|Ph\.?\s?D|Diploma|Degree)\b/i.test(e.title);
+    education = experience.filter(isEdu);
+    experience = experience.filter(e => !isEdu(e));
+  }
   return {
     experience,
+    education,
     certificates: certificates.map(c => ({ title: str(c.title), org: str(c.org), url: str(c.url) })).filter(c => c.title)
   };
 }
@@ -1756,10 +1777,11 @@ function expFields() {
     { name: "bullets", label: "Highlights", type: "textarea", rows: 4, hint: "One per line" }
   ];
 }
-function renderExperience() {
-  const box = document.getElementById("timeline");
+// Experience and Education share the same timeline layout
+function renderTimeline(list, boxId, what, fields) {
+  const box = document.getElementById(boxId);
   box.textContent = "";
-  data.experience.forEach((e, i) => {
+  list.forEach((e, i) => {
     const role = el("div", "role");
     const body = el("div");
     body.append(el("h3", null, e.title), el("div", "org", e.org));
@@ -1769,22 +1791,35 @@ function renderExperience() {
       body.append(ul);
     }
     if (canEdit) {
-      body.append(editTools(data.experience, i, () =>
-        openForm("Edit experience", expFields(), { ...e, bullets: e.bullets.join("\n") }, v => {
-          data.experience[i] = { when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) };
+      body.append(editTools(list, i, () =>
+        openForm("Edit " + what, fields(), { ...e, bullets: e.bullets.join("\n") }, v => {
+          list[i] = { when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) };
           save();
-        }), "experience"));
+        }), what));
     }
     role.append(el("div", "when", e.when), body);
     box.append(role);
   });
   if (canEdit) {
-    box.append(btn("+ Add experience", "add-card add-row", () =>
-      openForm("Add experience", expFields(), { when: "", title: "", org: "", bullets: "" }, v => {
-        data.experience.unshift({ when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) });
+    box.append(btn("+ Add " + what, "add-card add-row", () =>
+      openForm("Add " + what, fields(), { when: "", title: "", org: "", bullets: "" }, v => {
+        list.unshift({ when: v.when.trim(), title: v.title.trim(), org: v.org.trim(), bullets: lines(v.bullets) });
         save();
       })));
   }
+}
+function renderExperience() { renderTimeline(data.experience, "timeline", "experience", expFields); }
+function eduFields() {
+  return [
+    { name: "when", label: "When", hint: "e.g. 2023 – 2028" },
+    { name: "title", label: "Degree or program", required: true, hint: "e.g. B.Sc. Honours, Computer Science Co-op" },
+    { name: "org", label: "School", hint: "e.g. University of Windsor · Software Engineering, minor in Applied IT" },
+    { name: "bullets", label: "Details", type: "textarea", rows: 4, hint: "One per line, e.g. relevant courses" }
+  ];
+}
+function renderEducation() {
+  renderTimeline(data.education, "edu-timeline", "education", eduFields);
+  document.getElementById("education").hidden = !data.education.length && !canEdit;
 }
 
 // ---------- certificates ----------
@@ -2121,6 +2156,7 @@ function renderAll() {
   renderNow();
   renderAbout();
   renderExperience();
+  renderEducation();
   renderCertificates();
   renderSkills();
   renderProjectPage();
