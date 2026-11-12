@@ -255,6 +255,18 @@ h2 {
 .role .org { color: var(--muted); margin: 2px 0 10px; }
 .role ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
+/* certificates */
+.certs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cert {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 20px;
+}
+.cert h3 { font-family: var(--font-display); font-weight: 500; font-size: 18px; letter-spacing: -0.02em; line-height: 1.25; margin: 0; }
+.cert .org { color: var(--muted); margin: 0; }
+.cert .p-view { margin-top: 6px; }
+@media (max-width: 860px) { .certs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .certs { grid-template-columns: minmax(0, 1fr); } }
+
 /* skills */
 .skills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .skill-group { min-width: 0; }
@@ -358,8 +370,8 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 
 /* while the saved content loads, fade the changeable parts instead of showing old text */
 .loading-content #top .hero, .loading-content #projects, .loading-content #facts, .loading-content #now-list,
-.loading-content #timeline, .loading-content #skills, .loading-content #about-view, .loading-content #project-view { opacity: 0; }
-#top .hero, #projects, #facts, #now-list, #timeline, #skills, #about-view, #project-view { transition: opacity .25s ease; }
+.loading-content #timeline, .loading-content #certs, .loading-content #skills, .loading-content #about-view, .loading-content #project-view { opacity: 0; }
+#top .hero, #projects, #facts, #now-list, #timeline, #certs, #skills, #about-view, #project-view { transition: opacity .25s ease; }
 .sync { font-size: 11.5px; color: var(--muted); }
 .sync.ok { color: #2e9e5b; }
 .sync.bad { color: #c0392b; font-weight: 600; }
@@ -541,6 +553,13 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
     <div class="wrap">
       <div class="section-head"><h2>Experience</h2></div>
       <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <section id="certificates">
+    <div class="wrap">
+      <div class="section-head"><h2>Certificates</h2></div>
+      <div class="certs" id="certs"></div>
     </div>
   </section>
 
@@ -973,9 +992,15 @@ const DEFAULT_DATA = {
       "title": "B.Sc. Honours, Computer Science Co-op",
       "org": "University of Windsor · Software Engineering, minor in Applied IT",
       "bullets": [
-        "Computer Architecture, System Programming, Operating Systems, Computer Networks, Database Management Systems, Data Structures & Algorithms, Software Development, Cyber Ethics",
-        "Certificate: Unity Game Programming"
+        "Computer Architecture, System Programming, Operating Systems, Computer Networks, Database Management Systems, Data Structures & Algorithms, Software Development, Cyber Ethics"
       ]
+    }
+  ],
+  "certificates": [
+    {
+      "title": "Unity Game Programming",
+      "org": "University of Windsor",
+      "url": ""
     }
   ],
   "skills": [
@@ -1200,9 +1225,7 @@ function normalize(d) {
       details: str(p.details),
       links: arr(p.links).map(l => ({ label: str(l.label), url: str(l.url) })).filter(l => l.url)
     })),
-    experience: arr(d.experience).map(e => ({
-      when: str(e.when), title: str(e.title), org: str(e.org), bullets: arr(e.bullets).map(str).filter(Boolean)
-    })),
+    ...splitCertificates(d),
     skills: arr(d.skills).map(g => ({ group: str(g.group), items: arr(g.items).map(str).filter(Boolean) })),
     intro: typeof d.intro === "string" ? d.intro : DEFAULT_DATA.intro,
     location: typeof d.location === "string" && d.location ? d.location : "Windsor, ON",
@@ -1221,6 +1244,31 @@ function normalize(d) {
         interests: (Array.isArray(a.interests) ? a.interests : def.interests).map(v => ({ label: str(v.label), text: str(v.text) }))
       };
     })()
+  };
+}
+// Certificates have their own section. Older saved data kept them under Experience,
+// so the first time, any experience entry with "certificate" in its title moves over (without a date).
+function splitCertificates(d) {
+  let experience = arr(d.experience).map(e => ({
+    when: str(e.when), title: str(e.title), org: str(e.org), bullets: arr(e.bullets).map(str).filter(Boolean)
+  }));
+  let certificates;
+  if (Array.isArray(d.certificates)) {
+    certificates = d.certificates;
+  } else {
+    const isCert = e => /certificat/i.test(e.title);
+    certificates = experience.filter(isCert).map(e => ({
+      title: e.title.replace(/\s*certificate\s*/i, " ").trim() || e.title, org: e.org, url: ""
+    }));
+    experience = experience.filter(e => !isCert(e));
+    if (!certificates.length && !d.experience) certificates = DEFAULT_DATA.certificates;
+  }
+  experience.forEach(e => {   // drop the old "Certificate: ..." line from education, if it was added
+    e.bullets = e.bullets.filter(b => !/^certificate:/i.test(b));
+  });
+  return {
+    experience,
+    certificates: certificates.map(c => ({ title: str(c.title), org: str(c.org), url: str(c.url) })).filter(c => c.title)
   };
 }
 // build elements with textContent only, so saved text can never inject HTML
@@ -1739,6 +1787,47 @@ function renderExperience() {
   }
 }
 
+// ---------- certificates ----------
+function certFields() {
+  return [
+    { name: "title", label: "Certificate", required: true, hint: "e.g. Unity Game Programming" },
+    { name: "org", label: "Issued by", hint: "e.g. University of Windsor" },
+    { name: "url", label: "Credential link (optional)", hint: "A link where someone can verify it, if you have one" }
+  ];
+}
+function renderCertificates() {
+  const box = document.getElementById("certs");
+  box.textContent = "";
+  data.certificates.forEach((c, i) => {
+    const card = el("article", "cert");
+    card.append(el("h3", null, c.title));
+    if (c.org) card.append(el("p", "org", c.org));
+    const href = safeUrl(c.url);
+    if (href) {
+      const a = el("a", "p-view", "View credential →");
+      a.href = href; a.target = "_blank"; a.rel = "noopener";
+      card.append(a);
+    }
+    if (canEdit) {
+      card.append(editTools(data.certificates, i, () =>
+        openForm("Edit certificate", certFields(), c, v => {
+          data.certificates[i] = { title: v.title.trim(), org: v.org.trim(), url: v.url.trim() };
+          save();
+        }), "certificate"));
+    }
+    box.append(card);
+  });
+  if (canEdit) {
+    box.append(btn("+ Add certificate", "add-card", () =>
+      openForm("Add certificate", certFields(), { title: "", org: "", url: "" }, v => {
+        data.certificates.push({ title: v.title.trim(), org: v.org.trim(), url: v.url.trim() });
+        save();
+      })));
+  }
+  // hide the whole section for visitors when there are no certificates
+  document.getElementById("certificates").hidden = !data.certificates.length && !canEdit;
+}
+
 // ---------- stack ----------
 function renderSkills() {
   const box = document.getElementById("skills");
@@ -2032,6 +2121,7 @@ function renderAll() {
   renderNow();
   renderAbout();
   renderExperience();
+  renderCertificates();
   renderSkills();
   renderProjectPage();
   renderLocation();
