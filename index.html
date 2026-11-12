@@ -389,6 +389,8 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 }
 .tool:hover { border-color: var(--fg); }
 .tool.danger:hover { border-color: #c0392b; color: #c0392b; }
+.tool:disabled { opacity: .4; cursor: default; }
+.tool:disabled:hover { border-color: var(--line); }
 .add-card {
   font-family: var(--font-mono); font-size: 14px; cursor: pointer; min-height: 120px;
   border: 1.5px dashed var(--muted); border-radius: var(--radius); background: transparent; color: var(--muted);
@@ -1172,6 +1174,16 @@ const LOCAL_KEY = "portfolio-preview-data";
 let data = normalize(clone(DEFAULT_DATA));
 let canEdit = false;
 let store = null;          // { save(data) -> Promise }
+// ---------- undo / redo history ----------
+// committed = the version that is live right now. Every save pushes the version it replaces
+// onto undoStack; undo moves back through it, redo moves forward again.
+// History covers one sign-in: it starts empty when you sign in (so undo stops at how the site
+// looked then) and is cleared when you sign out.
+const HISTORY_LIMIT = 30;
+let committed = null;
+let undoStack = [];
+let redoStack = [];
+let historyBusy = false;
 let currentFilter = "all";
 
 // ---------- helpers ----------
@@ -1255,8 +1267,14 @@ async function save() {
   renderAll();
   if (!store) return;
   setSyncState("saving");
+  const before = committed ? clone(committed) : normalize(clone(DEFAULT_DATA));
   try {
     await store.save(clone(data));
+    undoStack.push(before);
+    if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+    redoStack = [];               // a new change replaces anything you could redo
+    committed = clone(data);
+    updateHistoryButtons();
     setSyncState("saved");
     toast("Saved: live for everyone");
   } catch (err) {
@@ -1278,22 +1296,54 @@ async function save() {
   }
 }
 // ---------- undo, backup, restore ----------
-async function undoLastSave() {
-  if (!store || !store.undo) return;
-  if (!confirm("Undo your last save?\nThe site goes back to how it was before it. (Press Undo again to redo.)")) return;
+// put an earlier (undo) or later (redo) version live
+async function stepHistory(dir) {
+  if (!store || historyBusy) return;
+  const from = dir === "undo" ? undoStack : redoStack;
+  const to = dir === "undo" ? redoStack : undoStack;
+  if (!from.length) { toast(dir === "undo" ? "Nothing to undo" : "Nothing to redo"); return; }
+  historyBusy = true;
+  updateHistoryButtons();
+  const target = from.pop();
+  const current = committed ? clone(committed) : normalize(clone(DEFAULT_DATA));
   setSyncState("saving");
   try {
-    const prev = await store.undo();
-    if (!prev) { setSyncState("saved"); toast("Nothing to undo yet"); return; }
-    data = prev; renderAll();
+    await store.save(clone(target));
+    to.push(current);
+    committed = clone(target);
+    data = normalize(clone(target));
+    renderAll();
     setSyncState("saved");
-    toast("Undone: previous version is live");
+    toast(dir === "undo" ? "Undone: earlier version is live" : "Redone: change is live again");
   } catch (err) {
     console.error(err);
+    from.push(target);          // nothing changed, so keep the history as it was
     setSyncState("failed");
-    toast("Couldn't undo: " + (err.message || err), 7000);
+    toast("Couldn't " + dir + ": " + (err.message || err), 7000);
+  } finally {
+    historyBusy = false;
+    updateHistoryButtons();
   }
 }
+function startHistory() { committed = clone(data); undoStack = []; redoStack = []; updateHistoryButtons(); }
+function clearHistory() { undoStack = []; redoStack = []; updateHistoryButtons(); }
+function undo() { return stepHistory("undo"); }
+function redo() { return stepHistory("redo"); }
+function updateHistoryButtons() {
+  const u = document.getElementById("undo-btn"), r = document.getElementById("redo-btn");
+  if (u) { u.disabled = historyBusy || !undoStack.length; u.title = undoStack.length ? "Undo (Ctrl+Z)" : "Nothing to undo"; }
+  if (r) { r.disabled = historyBusy || !redoStack.length; r.title = redoStack.length ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"; }
+}
+// keyboard shortcuts: Ctrl+Z undo, Ctrl+Shift+Z or Ctrl+Y redo (Cmd on Mac)
+document.addEventListener("keydown", e => {
+  if (!canEdit || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+  const t = e.target;
+  // leave normal text undo alone while typing, and while the edit form is open
+  if (document.getElementById("editor").open || (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if ((k === "z" && e.shiftKey) || k === "y") { e.preventDefault(); redo(); }
+});
 function downloadBackup() {
   const stamp = new Date().toISOString().slice(0, 10);
   const blob = new Blob([JSON.stringify({ portfolioBackup: 1, savedAt: new Date().toISOString(), content: data }, null, 2)],
@@ -1314,7 +1364,7 @@ async function restoreFromFile(file) {
   const when = parsed.savedAt ? " from " + new Date(parsed.savedAt).toLocaleString() : "";
   if (!confirm("Replace everything on your portfolio with this backup" + when + "?\n(You can press Undo afterwards if needed.)")) return;
   data = normalize(content);
-  await save();   // save() keeps the current version as "previous", so a restore can be undone too
+  await save();   // goes into the undo history like any other change
 }
 
 // small status next to "Editing" in the edit bar
@@ -2058,6 +2108,8 @@ function openForm(title, fields, values, onSave) {
 
 // ---------- edit bar ----------
 function setEditMode(on, label, onSignOut) {
+  if (on && !canEdit) startHistory();   // just signed in: undo can go back to this point
+  if (!on) clearHistory();               // signed out: history is gone
   canEdit = on;
   document.body.classList.toggle("editing", on);
   const bar = document.getElementById("edit-bar");
@@ -2067,11 +2119,15 @@ function setEditMode(on, label, onSignOut) {
     bar.append(el("span", "edit-dot"), el("span", null, label));
     const sync = el("span", "sync", ""); sync.id = "sync-state"; bar.append(sync);
     bar.append(
-      btn("Undo", "tool", undoLastSave, "Undo your last save"),
+      btn("Undo", "tool", undo, "Undo your last change"),
+      btn("Redo", "tool", redo, "Redo the change you undid"),
       btn("Backup", "tool", downloadBackup, "Download a backup file of all your content"),
       btn("Restore", "tool", () => document.getElementById("restore-file").click(), "Restore from a backup file")
     );
     if (onSignOut) bar.append(btn("Sign out", "tool", onSignOut));
+    const [u, r] = bar.querySelectorAll(".tool");
+    u.id = "undo-btn"; r.id = "redo-btn";
+    updateHistoryButtons();
   }
   renderAll();
 }
@@ -2100,36 +2156,16 @@ async function startFirebase() {
     const snap = await fsMod.getDocFromServer(ref);
     return snap.exists() ? normalize(snap.data()) : null;
   }
-  const prevRef = fsMod.doc(db, "portfolio", "previous");   // the version before your last save
-  let lastSaved = null;                                       // what is currently live
   try {
     const snap = await fsMod.getDocFromServer(ref);
-    if (snap.exists()) { lastSaved = snap.data(); data = normalize(lastSaved); renderAll(); }
+    if (snap.exists()) { data = normalize(snap.data()); renderAll(); }
   } catch (err) {
     console.warn("Couldn't load saved portfolio, showing defaults:", err);
   }
   showContent();
   store = {
     load,
-    // before saving, keep what was live as "previous", so one save can always be undone
-    async save(d) {
-      const before = lastSaved || clone(DEFAULT_DATA);
-      await fsMod.setDoc(prevRef, { ...before, backupAt: new Date().toISOString() });
-      await fsMod.setDoc(ref, d);
-      lastSaved = clone(d);
-    },
-    // swap live and previous: undo puts the previous version back (and pressing again redoes)
-    async undo() {
-      const snap = await fsMod.getDocFromServer(prevRef);
-      if (!snap.exists()) return null;
-      const prev = snap.data();
-      delete prev.backupAt;
-      const current = lastSaved || clone(DEFAULT_DATA);
-      await fsMod.setDoc(prevRef, { ...current, backupAt: new Date().toISOString() });
-      await fsMod.setDoc(ref, prev);
-      lastSaved = prev;
-      return normalize(prev);
-    }
+    async save(d) { await fsMod.setDoc(ref, d); }
   };
   // when you come back to the tab (e.g. phone was in your pocket), fetch the latest again
   document.addEventListener("visibilitychange", async () => {
@@ -2172,18 +2208,7 @@ function startPreview() {
     if (saved) data = normalize(JSON.parse(saved));
   } catch (err) { /* storage unavailable: use defaults */ }
   store = {
-    async save(d) {
-      const before = localStorage.getItem(LOCAL_KEY) || JSON.stringify(DEFAULT_DATA);
-      localStorage.setItem(LOCAL_KEY + "-previous", before);
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(d));
-    },
-    async undo() {
-      const prev = localStorage.getItem(LOCAL_KEY + "-previous");
-      if (!prev) return null;
-      localStorage.setItem(LOCAL_KEY + "-previous", localStorage.getItem(LOCAL_KEY) || JSON.stringify(DEFAULT_DATA));
-      localStorage.setItem(LOCAL_KEY, prev);
-      return normalize(JSON.parse(prev));
-    }
+    async save(d) { localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); }
   };
   setEditMode(true, "Preview: saved in this browser only");
 }
