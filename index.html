@@ -497,6 +497,17 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
   .project, .btn { transition: none; }
   .project:hover, .btn:hover { transform: none; }
 }
+
+/* bullet lines: "# " = heading line, "> " = plain line, both without a bullet */
+.project ul, .role ul { --indent: 18px; }
+.pp-text ul { --indent: 20px; }
+ul > li.line-plain, ul > li.line-head { list-style: none; margin-left: calc(-1 * var(--indent, 18px)); }
+ul > li.line-head { font-weight: 600; color: var(--fg); }
+ul > li.line-head:not(:first-child) { margin-top: 6px; }
+
+/* bulleted lines inside summaries and the about story */
+ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.pp-summary + ul.text-list, ul.text-list + .pp-summary { margin-top: 10px; }
 </style>
 
 <header class="topbar">
@@ -1332,6 +1343,18 @@ function formatInto(target, text) {
     else target.append(part);
   });
 }
+// One bullet line -> <li>. Start a line with "# " for a heading with no bullet,
+// or "> " for a plain line with no bullet. Every other line (or one starting "< ") is a normal bullet.
+function bulletItem(text) {
+  const t = String(text);
+  let cls = null, body = t;
+  if (/^#\s+/.test(t)) { cls = "line-head"; body = t.replace(/^#\s+/, ""); }
+  else if (/^>\s+/.test(t)) { cls = "line-plain"; body = t.replace(/^>\s+/, ""); }
+  else if (/^<\s+/.test(t)) { body = t.replace(/^<\s+/, ""); }
+  const li = el("li", cls);
+  formatInto(li, body);
+  return li;
+}
 function btn(text, cls, onClick, label) {
   const b = el("button", cls, text);
   b.type = "button";
@@ -1516,8 +1539,8 @@ function projectFields() {
     { name: "date", label: "Date", hint: "e.g. Feb – Apr 2026" },
     { name: "cats", label: "Filters", type: "checks", options: data.categories, hint: "Add new filters with + Add filter above the projects." },
     { name: "wide", label: "Full-width card", type: "checkbox" },
-    { name: "summary", label: "Summary", type: "textarea", rows: 2 },
-    { name: "bullets", label: "Highlights", type: "textarea", rows: 4, hint: "One per line" },
+    { name: "summary", label: "Summary", type: "textarea", rows: 3, hint: "Start a line with < for a bullet." },
+    { name: "bullets", label: "Highlights", type: "textarea", rows: 4, hint: "One per line. Start a line with # for a heading or > for a line without a bullet." },
     { name: "metrics", label: "Metrics", type: "textarea", rows: 3, hint: "One per line, as number | label, e.g. 60 | FPS" },
     { name: "stack", label: "Tech stack", hint: "Comma separated, e.g. Python, React, SQL" },
     { name: "cover", label: "Cover", hint: "Picture or video shown on the card: images/cover.png, images/demo.mp4, or a YouTube/Vimeo link. Videos play silently on a loop." },
@@ -1587,10 +1610,10 @@ function renderProjects() {
     const top = el("div", "p-top");
     top.append(el("span", "p-cats", p.label), el("span", "p-date", p.date));
     a.append(top, el("h3", null, p.title));
-    if (p.summary) a.append(el("p", null, p.summary));
+    if (p.summary) a.append(textBlock(p.summary, null));
     if (p.bullets.length) {
       const ul = el("ul");
-      p.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
+      p.bullets.forEach(b => ul.append(bulletItem(b)));
       a.append(ul);
     }
     if (p.metrics.length) {
@@ -1714,7 +1737,7 @@ function renderProjectPage() {
   const meta = el("div", "pp-meta");
   meta.append(el("span", "p-cats", p.label), el("span", "p-date", p.date));
   page.append(meta, el("h1", "pp-title", p.title));
-  if (p.summary) page.append(el("p", "pp-summary", p.summary));
+  if (p.summary) page.append(textBlock(p.summary, "pp-summary"));
 
   if (p.links.length) {
     const row = el("div", "pp-links");
@@ -1760,7 +1783,7 @@ function renderProjectPage() {
   if (p.bullets.length) {
     main.append(el("h2", "pp-h", "Highlights"));
     const ul = el("ul");
-    p.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
+    p.bullets.forEach(b => ul.append(bulletItem(b)));
     main.append(ul);
   }
   const side = el("aside", "pp-side");
@@ -1820,7 +1843,7 @@ function renderTimeline(list, boxId, what, fields) {
     body.append(el("h3", null, e.title), el("div", "org", e.org));
     if (e.bullets.length) {
       const ul = el("ul");
-      e.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
+      e.bullets.forEach(b => ul.append(bulletItem(b)));
       body.append(ul);
     }
     if (canEdit) {
@@ -1860,7 +1883,7 @@ function eduFields() {
     { name: "when", label: "When", hint: "e.g. 2023 – 2028" },
     { name: "title", label: "Degree or program", required: true, hint: "e.g. B.Sc. Honours, Computer Science Co-op" },
     { name: "org", label: "School", hint: "e.g. University of Windsor · Software Engineering, minor in Applied IT" },
-    { name: "bullets", label: "Details", type: "textarea", rows: 4, hint: "One per line, e.g. relevant courses" }
+    { name: "bullets", label: "Details", type: "textarea", rows: 4, hint: "One per line, e.g. relevant courses. Start a line with # for a heading or > for a line without a bullet." }
   ];
 }
 function renderEducation() {
@@ -1988,10 +2011,28 @@ function fillTokens(text) {
 }
 function rich(target, text) {
   target.textContent = "";
-  fillTokens(text).split("**").forEach((part, i) => {
-    if (!part) return;
-    target.append(i % 2 ? el("strong", null, part) : document.createTextNode(part));
+  formatInto(target, fillTokens(text));
+}
+// Free text -> paragraphs, with any lines starting "< " shown as a bulleted list.
+function textBlock(text, pClass) {
+  const frag = document.createDocumentFragment();
+  let ul = null, para = [];
+  const flush = () => {
+    if (para.length) { const p = el("p", pClass); rich(p, para.join(" ")); frag.append(p); para = []; }
+  };
+  String(text).split("\n").forEach(raw => {
+    const line = raw.trim();
+    if (/^<\s+/.test(line)) {
+      flush();
+      if (!ul) { ul = el("ul", "text-list"); frag.append(ul); }
+      const li = el("li"); rich(li, line.replace(/^<\s+/, "")); ul.append(li);
+    } else {
+      ul = null;
+      if (line) para.push(line); else flush();
+    }
   });
+  flush();
+  return frag;
 }
 function pairsToText(list, a, b) { return list.map(x => x[a] + " | " + x[b]).join("\n"); }
 function textToPairs(text, a, b) {
@@ -2005,7 +2046,7 @@ function slotButton(slotId, label, onClick) {
   slot.textContent = "";
   if (canEdit) slot.append(btn(label, "tool", onClick));
 }
-const TOKEN_HINT = "Use **double stars** for bold. {status} inserts your current status.";
+const TOKEN_HINT = "Formatting: **bold** *italic* __underline__ ~~strike~~ ^sup^ ~sub~ ==highlight==. {status} inserts your current status.";
 
 function renderIntro() {
   rich(document.getElementById("lede"), data.intro);
@@ -2056,15 +2097,15 @@ function renderAbout() {
   document.getElementById("about-title").textContent = a.title;
   const story = document.getElementById("story");
   story.textContent = "";
-  a.story.forEach((para, i) => { const p = el("p", i === 0 ? "big" : null); rich(p, para); story.append(p); });
+  a.story.forEach((para, i) => story.append(textBlock(para, i === 0 ? "big" : null)));
   slotButton("slot-story", "Edit story", () =>
     openForm("Edit about story", [
       { name: "title", label: "Heading" },
       { name: "story", label: "Story", type: "textarea", rows: 10,
-        hint: "Leave a blank line between paragraphs. The first paragraph shows larger. " + TOKEN_HINT }
+        hint: "Leave a blank line between paragraphs. The first paragraph shows larger. Start a line with < for a bullet. " + TOKEN_HINT }
     ], { title: a.title, story: a.story.join("\n\n") }, v => {
       a.title = v.title.trim();
-      a.story = v.story.split(/\n\s*\n/).map(x => x.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean);
+      a.story = v.story.split(/\n\s*\n/).map(x => /^\s*<\s/m.test(x) ? x.trim() : x.trim().replace(/\s*\n\s*/g, " ")).filter(Boolean);
       save();
     }));
 
