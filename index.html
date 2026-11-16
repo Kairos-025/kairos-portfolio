@@ -1840,7 +1840,8 @@ function renderTimeline(list, boxId, what, fields) {
   list.forEach((e, i) => {
     const role = el("div", "role");
     const body = el("div");
-    body.append(el("h3", null, e.title), el("div", "org", e.org));
+    const org = el("div", "org"); rich(org, e.org);
+    body.append(el("h3", null, e.title), org);
     if (e.bullets.length) {
       const ul = el("ul");
       e.bullets.forEach(b => ul.append(bulletItem(b)));
