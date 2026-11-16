@@ -1305,6 +1305,33 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
+// Text formatting for bullets, typed in the editor:
+// **bold**  *italic*  __underline__  ~~strikethrough~~  ^superscript^  ~subscript~  ==highlight==  `code`
+// Built with textContent only, so saved text still can never inject HTML.
+const FORMATS = [
+  { open: "**", close: "**", tag: "strong" }, // bold
+  { open: "__", close: "__", tag: "u" },      // underline
+  { open: "~~", close: "~~", tag: "s" },      // strikethrough
+  { open: "==", close: "==", tag: "mark" },   // highlight
+  { open: "*",  close: "*",  tag: "em" },     // italic
+  { open: "^",  close: "^",  tag: "sup" },    // superscript (power)
+  { open: "~",  close: "~",  tag: "sub" },    // subscript (base)
+  { open: "`",  close: "`",  tag: "code" }    // code
+];
+const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const FORMAT_RE = new RegExp(
+  "(" + FORMATS.map(f => escapeRe(f.open) + "[^\\n]+?" + escapeRe(f.close)).join("|") + ")"
+);
+function formatInto(target, text) {
+  String(text).split(FORMAT_RE).forEach(part => {
+    if (!part) return;
+    const f = FORMATS.find(f =>
+      part.length > f.open.length + f.close.length &&
+      part.startsWith(f.open) && part.endsWith(f.close));
+    if (f) target.append(el(f.tag, null, part.slice(f.open.length, part.length - f.close.length)));
+    else target.append(part);
+  });
+}
 function btn(text, cls, onClick, label) {
   const b = el("button", cls, text);
   b.type = "button";
@@ -1563,7 +1590,7 @@ function renderProjects() {
     if (p.summary) a.append(el("p", null, p.summary));
     if (p.bullets.length) {
       const ul = el("ul");
-      p.bullets.forEach(b => ul.append(el("li", null, b)));
+      p.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
       a.append(ul);
     }
     if (p.metrics.length) {
@@ -1733,7 +1760,7 @@ function renderProjectPage() {
   if (p.bullets.length) {
     main.append(el("h2", "pp-h", "Highlights"));
     const ul = el("ul");
-    p.bullets.forEach(b => ul.append(el("li", null, b)));
+    p.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
     main.append(ul);
   }
   const side = el("aside", "pp-side");
@@ -1793,7 +1820,7 @@ function renderTimeline(list, boxId, what, fields) {
     body.append(el("h3", null, e.title), el("div", "org", e.org));
     if (e.bullets.length) {
       const ul = el("ul");
-      e.bullets.forEach(b => ul.append(el("li", null, b)));
+      e.bullets.forEach(b => { const li = el("li"); formatInto(li, b); ul.append(li); });
       body.append(ul);
     }
     if (canEdit) {
