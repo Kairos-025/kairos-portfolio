@@ -2113,29 +2113,31 @@ function renderAbout() {
   dl.textContent = "";
   a.facts.forEach(f => {
     const row = el("div", "row");
-    row.append(el("dt", null, f.label), el("dd", null, f.value.toLowerCase() === "auto" ? statusText() : f.value));
+    const dd = el("dd");
+    if (f.value.toLowerCase() === "auto") dd.textContent = statusText(); else rich(dd, f.value);
+    row.append(el("dt", null, f.label), dd);
     dl.append(row);
   });
   slotButton("slot-about-facts", "Edit quick facts", () =>
     openForm("Edit quick facts", [
       { name: "facts", label: "Quick facts", type: "textarea", rows: 9,
-        hint: "One per line, as label | value. Write auto as the value to show your current status." }
+        hint: "One per line, as label | value. Write auto as the value to show your current status. Formatting like **bold** works in the value." }
     ], { facts: pairsToText(a.facts, "label", "value") }, v => { a.facts = textToPairs(v.facts, "label", "value"); save(); }));
 
   const values = document.getElementById("values");
   values.textContent = "";
-  a.values.forEach(v => { const d = el("div", "value"); d.append(el("h3", null, v.title), el("p", null, v.text)); values.append(d); });
+  a.values.forEach(v => { const d = el("div", "value"); const t = el("p"); rich(t, v.text); d.append(el("h3", null, v.title), t); values.append(d); });
   slotButton("slot-values", "Edit how I work", () =>
     openForm("Edit how I work", [
-      { name: "values", label: "Points", type: "textarea", rows: 6, hint: "One per line, as title | text" }
+      { name: "values", label: "Points", type: "textarea", rows: 6, hint: "One per line, as title | text. Formatting like **bold** works in the text." }
     ], { values: pairsToText(a.values, "title", "text") }, v => { a.values = textToPairs(v.values, "title", "text"); save(); }));
 
   const interests = document.getElementById("interests");
   interests.textContent = "";
-  a.interests.forEach(v => { const d = el("div", "interest"); d.append(el("span", "eyebrow", v.label), el("p", null, v.text)); interests.append(d); });
+  a.interests.forEach(v => { const d = el("div", "interest"); const t = el("p"); rich(t, v.text); d.append(el("span", "eyebrow", v.label), t); interests.append(d); });
   slotButton("slot-interests", "Edit beyond code", () =>
     openForm("Edit beyond code", [
-      { name: "interests", label: "Interests", type: "textarea", rows: 7, hint: "One per line, as label | text" }
+      { name: "interests", label: "Interests", type: "textarea", rows: 7, hint: "One per line, as label | text. Formatting like **bold** works in the text." }
     ], { interests: pairsToText(a.interests, "label", "text") }, v => { a.interests = textToPairs(v.interests, "label", "text"); save(); }));
 }
 
