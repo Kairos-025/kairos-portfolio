@@ -390,6 +390,9 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 .edit-slot .resume-note { font-size: 13px; opacity: .7; margin-right: 8px; }
 #slot-resume { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 #slot-resume:empty { display: none; }
+#slot-resume-contact { margin-top: 0; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#slot-resume-contact:empty { display: none; }
+.resume-cell { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
 .filter-wrap { display: inline-flex; align-items: center; }
 .filter-wrap .chip-x { padding: 0 4px 0 4px; }
 .add-filter { border-style: dashed; color: var(--muted); background: transparent; }
@@ -430,7 +433,7 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 .chip-add input { width: 92px; border: 0; background: transparent; color: var(--fg); font-family: var(--font-mono); font-size: 12px; padding: 4px 4px 4px 10px; }
 .chip-add button { border: 0; background: transparent; color: var(--fg); cursor: pointer; padding: 0 10px; font-size: 14px; }
 .edit-bar {
-  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(var(--topbar-h, 58px) + 10px + env(safe-area-inset-top, 0px)); z-index: 20;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: calc(100vw - 32px);
   font-family: var(--font-mono); font-size: 12.5px;
   background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 999px;
@@ -665,7 +668,10 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
       </div>
       <div class="contact-row" id="resume-row" hidden>
         <span class="k">Resume</span>
-        <a class="v" id="resume-link" href="#">Download PDF</a>
+        <span class="resume-cell">
+          <a class="v" id="resume-link" href="#">Download PDF</a>
+          <span class="edit-slot" id="slot-resume-contact"></span>
+        </span>
       </div>
     </div>
   </div>
@@ -2398,32 +2404,36 @@ function resumeBlobUrl() {
 }
 function renderResume() {
   const url = resumeBlobUrl();
-  [document.getElementById("resume-btn"), document.getElementById("resume-link")].forEach(a => {
-    if (!a) return;
+  const link = document.getElementById("resume-link");
+  [document.getElementById("resume-btn"), link].forEach(a => {
     if (url) { a.href = url; a.setAttribute("download", RESUME_NAME); }
     else { a.removeAttribute("href"); a.removeAttribute("download"); }
   });
   document.getElementById("resume-btn").hidden = !url;
-  document.getElementById("resume-row").hidden = !url;
-
-  const slot = document.getElementById("slot-resume");
-  slot.textContent = "";
-  if (!canEdit) return;
+  link.hidden = !url;
+  // visitors only see the Contact row once a resume exists; you always see it while editing
+  document.getElementById("resume-row").hidden = !url && !canEdit;
+  ["slot-resume", "slot-resume-contact"].forEach(id => {
+    const slot = document.getElementById(id);
+    slot.textContent = "";
+    if (canEdit) resumeControls(slot, Boolean(url), id === "slot-resume");
+  });
+}
+// owner-only buttons: Upload when there's no resume yet, Replace/Remove after
+function resumeControls(slot, has, showDate) {
   const pick = () => document.getElementById("resume-file").click();
-  if (url) {
-    const when = resume.updated ? new Date(resume.updated).toLocaleDateString() : "";
-    slot.append(
-      el("span", "resume-note", "Resume PDF" + (when ? " (updated " + when + ")" : "") + " "),
-      btn("Replace resume", "tool", pick, "Upload a new resume PDF"),
-      btn("Remove", "tool", async () => {
-        if (!confirm("Remove the resume? Visitors won't be able to download it.")) return;
-        try { await resumeStore.remove(); resume = null; renderResume(); toast("Resume removed"); }
-        catch (err) { toast("Couldn't remove: " + err.message, 6000); }
-      }, "Remove the resume PDF")
-    );
-  } else {
-    slot.append(btn("Upload resume PDF", "tool", pick, "Upload your resume PDF for visitors to download"));
+  if (!has) { slot.append(btn("Upload resume PDF", "tool", pick, "Upload your resume PDF for visitors to download")); return; }
+  if (showDate && resume.updated) {
+    slot.append(el("span", "resume-note", "Resume PDF (updated " + new Date(resume.updated).toLocaleDateString() + ")"));
   }
+  slot.append(
+    btn("Replace resume", "tool", pick, "Upload a new resume PDF"),
+    btn("Remove", "tool", async () => {
+      if (!confirm("Remove the resume? Visitors won't be able to download it.")) return;
+      try { await resumeStore.remove(); resume = null; renderResume(); toast("Resume removed"); }
+      catch (err) { toast("Couldn't remove: " + err.message, 6000); }
+    }, "Remove the resume PDF")
+  );
 }
 async function uploadResume(file) {
   if (!file || !resumeStore) return;
@@ -2585,6 +2595,14 @@ window.addEventListener("hashchange", route);
 route();
 
 document.getElementById("year").textContent = new Date().getFullYear();
+
+// keep the edit bar just below the header, whatever height the header ends up
+function syncTopbarHeight() {
+  const h = document.querySelector(".topbar").getBoundingClientRect().height;
+  document.documentElement.style.setProperty("--topbar-h", Math.round(h) + "px");
+}
+syncTopbarHeight();
+window.addEventListener("resize", syncTopbarHeight);
 
 // ---------- copy email ----------
 document.querySelectorAll(".email-group").forEach(group => {
