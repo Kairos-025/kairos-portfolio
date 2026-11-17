@@ -387,6 +387,9 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
 #slot-location { display: inline-flex; gap: 6px; margin: 0 0 0 10px; vertical-align: middle; }
 .edit-slot:empty { display: none; }
 .edit-slot { margin-top: 14px; }
+.edit-slot .resume-note { font-size: 13px; opacity: .7; margin-right: 8px; }
+#slot-resume { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#slot-resume:empty { display: none; }
 .filter-wrap { display: inline-flex; align-items: center; }
 .filter-wrap .chip-x { padding: 0 4px 0 4px; }
 .add-filter { border-style: dashed; color: var(--muted); background: transparent; }
@@ -533,7 +536,9 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
       <a class="btn" href="#about">About me</a>
       <a class="btn" href="https://github.com/Kairos-025" target="_blank" rel="noopener">GitHub</a>
       <a class="btn" href="https://www.linkedin.com/in/ekemini-john-47730b226/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn resume-btn" id="resume-btn" href="#" hidden>Download resume</a>
     </div>
+    <div class="edit-slot" id="slot-resume"></div>
     <div class="facts" id="facts"></div>
     <div class="edit-slot" id="slot-facts"></div>
   </div>
@@ -658,6 +663,10 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
         <span class="k">GitHub</span>
         <a class="v" href="https://github.com/Kairos-025" target="_blank" rel="noopener">github.com/Kairos-025</a>
       </div>
+      <div class="contact-row" id="resume-row" hidden>
+        <span class="k">Resume</span>
+        <a class="v" id="resume-link" href="#">Download PDF</a>
+      </div>
     </div>
   </div>
 </section>
@@ -679,6 +688,7 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 </dialog>
 <div id="edit-bar" class="edit-bar" hidden></div>
 <input type="file" id="restore-file" accept="application/json,.json" hidden>
+<input type="file" id="resume-file" accept="application/pdf,.pdf" hidden>
 <div id="toast" class="toast" role="status" hidden></div>
 <script type="module">
 // =====================================================================
@@ -2272,6 +2282,7 @@ function renderAll() {
   renderTicker();
   renderProjectPage();
   renderLocation();
+  renderResume();
 }
 
 // ---------- form dialog ----------
@@ -2366,6 +2377,81 @@ function showSignIn(onClick) {
   bar.append(btn("Sign in to edit", "tool", onClick));
 }
 
+// ---------- resume PDF: you upload it, every visitor can download it ----------
+// Saved as its own document (portfolio/resume), separate from your main content,
+// so it never touches undo/redo or backups. Visitors always download it as RESUME_NAME.
+const RESUME_NAME = "Ekemini_John_Resume.pdf";
+const RESUME_MAX_BYTES = 700 * 1024;      // keeps it safely under Firestore's 1 MB document limit
+let resume = null;                        // { b64, size, updated } once loaded
+let resumeUrl = null;                     // blob: link built from the saved PDF
+let resumeStore = null;                   // set by startFirebase() or startPreview()
+
+function resumeBlobUrl() {
+  if (resumeUrl) URL.revokeObjectURL(resumeUrl);
+  resumeUrl = null;
+  if (!resume || !resume.b64) return null;
+  const bin = atob(resume.b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  resumeUrl = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  return resumeUrl;
+}
+function renderResume() {
+  const url = resumeBlobUrl();
+  [document.getElementById("resume-btn"), document.getElementById("resume-link")].forEach(a => {
+    if (!a) return;
+    if (url) { a.href = url; a.setAttribute("download", RESUME_NAME); }
+    else { a.removeAttribute("href"); a.removeAttribute("download"); }
+  });
+  document.getElementById("resume-btn").hidden = !url;
+  document.getElementById("resume-row").hidden = !url;
+
+  const slot = document.getElementById("slot-resume");
+  slot.textContent = "";
+  if (!canEdit) return;
+  const pick = () => document.getElementById("resume-file").click();
+  if (url) {
+    const when = resume.updated ? new Date(resume.updated).toLocaleDateString() : "";
+    slot.append(
+      el("span", "resume-note", "Resume PDF" + (when ? " (updated " + when + ")" : "") + " "),
+      btn("Replace resume", "tool", pick, "Upload a new resume PDF"),
+      btn("Remove", "tool", async () => {
+        if (!confirm("Remove the resume? Visitors won't be able to download it.")) return;
+        try { await resumeStore.remove(); resume = null; renderResume(); toast("Resume removed"); }
+        catch (err) { toast("Couldn't remove: " + err.message, 6000); }
+      }, "Remove the resume PDF")
+    );
+  } else {
+    slot.append(btn("Upload resume PDF", "tool", pick, "Upload your resume PDF for visitors to download"));
+  }
+}
+async function uploadResume(file) {
+  if (!file || !resumeStore) return;
+  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") { toast("Please choose a PDF file."); return; }
+  if (file.size > RESUME_MAX_BYTES) {
+    toast("That PDF is " + Math.round(file.size / 1024) + " KB. Keep it under " + RESUME_MAX_BYTES / 1024 + " KB.", 6000);
+    return;
+  }
+  const buf = new Uint8Array(await file.arrayBuffer());
+  if (String.fromCharCode(...buf.slice(0, 5)) !== "%PDF-") { toast("That file isn't a real PDF."); return; }
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  const next = { b64: btoa(bin), size: file.size, updated: Date.now() };
+  try {
+    toast("Uploading resume...");
+    await resumeStore.save(next);
+    resume = next;
+    renderResume();
+    toast("Resume uploaded. Visitors can download it now.");
+  } catch (err) {
+    toast("Upload failed: " + err.message + " (check your Firestore rules allow portfolio/resume)", 8000);
+  }
+}
+document.getElementById("resume-file").addEventListener("change", e => {
+  uploadResume(e.target.files[0]);
+  e.target.value = "";
+});
+
 // ---------- storage: Firebase (live) or this browser (preview) ----------
 async function startFirebase() {
   const v = "13.2.0";
@@ -2378,6 +2464,17 @@ async function startFirebase() {
   const auth = authMod.getAuth(app);
   const db = fsMod.getFirestore(app);
   const ref = fsMod.doc(db, "portfolio", "main");
+  const resumeRef = fsMod.doc(db, "portfolio", "resume");
+  resumeStore = {
+    async save(r) { await fsMod.setDoc(resumeRef, r); },
+    async remove() { await fsMod.deleteDoc(resumeRef); }
+  };
+  // load the resume on its own, so a missing or slow resume never delays the page
+  fsMod.getDocFromServer(resumeRef).then(snap => {
+    const r = snap.exists() ? snap.data() : null;
+    resume = r && typeof r.b64 === "string" ? r : null;
+    renderResume();
+  }).catch(err => console.warn("Couldn't load resume:", err));
 
   // always ask the server (not a cached copy), so every device shows the same saved version
   async function load() {
@@ -2437,6 +2534,14 @@ function startPreview() {
   } catch (err) { /* storage unavailable: use defaults */ }
   store = {
     async save(d) { localStorage.setItem(LOCAL_KEY, JSON.stringify(d)); }
+  };
+  try {
+    const r = JSON.parse(localStorage.getItem(LOCAL_KEY + "-resume") || "null");
+    if (r && typeof r.b64 === "string") resume = r;
+  } catch (err) { /* storage unavailable: no resume in preview */ }
+  resumeStore = {
+    async save(r) { localStorage.setItem(LOCAL_KEY + "-resume", JSON.stringify(r)); },
+    async remove() { localStorage.removeItem(LOCAL_KEY + "-resume"); }
   };
   setEditMode(true, "Preview: saved in this browser only");
 }
