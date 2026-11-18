@@ -523,6 +523,8 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
       <a href="#about">about</a>
       <a href="#work">work</a>
       <a href="#experience">experience</a>
+      <a href="#education">education</a>
+      <a href="#certificates">awards</a>
       <a href="#stack">stack</a>
       <a href="#contact">contact</a>
     </nav>
@@ -589,7 +591,7 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 
   <section id="certificates">
     <div class="wrap">
-      <div class="section-head"><h2>Certificates</h2></div>
+      <div class="section-head"><h2>Awards &amp; Certificates</h2></div>
       <div class="certs" id="certs"></div>
     </div>
   </section>
@@ -1033,12 +1035,16 @@ const DEFAULT_DATA = {
       "title": "B.Sc. Honours, Computer Science Co-op",
       "org": "University of Windsor · Software Engineering, minor in Applied IT",
       "bullets": [
-        "Recipient of the $20,000 International Student Renewable Scholarship of Excellence",
         "Computer Architecture, System Programming, Operating Systems, Computer Networks, Database Management Systems, Data Structures & Algorithms, Software Development, Cyber Ethics"
       ]
     }
   ],
   "certificates": [
+    {
+      "title": "International Student Renewable Scholarship of Excellence",
+      "org": "University of Windsor · $20,000",
+      "url": ""
+    },
     {
       "title": "Unity Game Programming",
       "org": "University of Windsor",
@@ -1912,7 +1918,7 @@ function renderEducation() {
 // ---------- certificates ----------
 function certFields() {
   return [
-    { name: "title", label: "Certificate", required: true, hint: "e.g. Unity Game Programming" },
+    { name: "title", label: "Award or certificate", required: true, hint: "e.g. Unity Game Programming" },
     { name: "org", label: "Issued by", hint: "e.g. University of Windsor" },
     { name: "url", label: "Credential link (optional)", hint: "A link where someone can verify it, if you have one" }
   ];
@@ -1932,7 +1938,7 @@ function renderCertificates() {
     }
     if (canEdit) {
       card.append(editTools(data.certificates, i, () =>
-        openForm("Edit certificate", certFields(), c, v => {
+        openForm("Edit award or certificate", certFields(), c, v => {
           data.certificates[i] = { title: v.title.trim(), org: v.org.trim(), url: v.url.trim() };
           save();
         }), "certificate"));
@@ -1940,8 +1946,8 @@ function renderCertificates() {
     box.append(card);
   });
   if (canEdit) {
-    box.append(btn("+ Add certificate", "add-card", () =>
-      openForm("Add certificate", certFields(), { title: "", org: "", url: "" }, v => {
+    box.append(btn("+ Add award or certificate", "add-card", () =>
+      openForm("Add award or certificate", certFields(), { title: "", org: "", url: "" }, v => {
         data.certificates.push({ title: v.title.trim(), org: v.org.trim(), url: v.url.trim() });
         save();
       })));
