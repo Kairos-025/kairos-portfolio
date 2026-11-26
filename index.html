@@ -224,7 +224,7 @@ h2 {
   font-family: var(--font-mono); font-size: 11px; padding: 4px 10px 4px 6px; border-radius: 999px;
   border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
 .show-tick input { margin: 0; width: 14px; height: 14px; accent-color: var(--fg); cursor: pointer; }
-.project.off > :not(.edit-tools) { opacity: .4; }
+.project.off > :not(.edit-tools), .cert.off > :not(.edit-tools) { opacity: .4; }
 .project {
   display: flex; flex-direction: column; gap: 14px;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
@@ -1356,7 +1356,7 @@ function splitCertificates(d) {
   return {
     experience,
     education,
-    certificates: certificates.map(c => ({ title: str(c.title), org: str(c.org), url: str(c.url) })).filter(c => c.title)
+    certificates: certificates.map(c => ({ title: str(c.title), org: str(c.org), url: str(c.url), shown: c.shown !== false })).filter(c => c.title)
   };
 }
 // build elements with textContent only, so saved text can never inject HTML
@@ -1694,13 +1694,7 @@ function renderProjects() {
         openForm("Edit project", projectFields(), projectToForm(p), v => {
           data.projects[i] = { ...formToProject(v), id: p.id, shown: p.shown }; save();
         }), "project");
-      const tick = el("label", "show-tick");
-      const cb = el("input");
-      cb.type = "checkbox"; cb.checked = p.shown; cb.id = "show-" + p.id;
-      cb.setAttribute("aria-label", "Show " + p.title + " to visitors");
-      cb.addEventListener("change", () => { p.shown = cb.checked; save(); });
-      tick.append(cb, el("span", null, p.shown ? "Shown" : "Hidden"));
-      tools.append(tick);
+      tools.append(showTick(p, "show-" + p.id, p.title));
       a.append(tools);
     }
     box.append(a);
@@ -1713,6 +1707,17 @@ function renderProjects() {
       })), v => { data.projects.unshift(formToProject(v)); save(); })));
   }
   applyFilter(currentFilter);
+}
+
+// owner-only tick box: ticked = visitors can see this item
+function showTick(item, id, title) {
+  const tick = el("label", "show-tick");
+  const cb = el("input");
+  cb.type = "checkbox"; cb.checked = item.shown; cb.id = id;
+  cb.setAttribute("aria-label", "Show " + title + " to visitors");
+  cb.addEventListener("change", () => { item.shown = cb.checked; save(); });
+  tick.append(cb, el("span", null, item.shown ? "Shown" : "Hidden"));
+  return tick;
 }
 
 // ---------- project page ----------
@@ -1980,7 +1985,8 @@ function renderCertificates() {
   const box = document.getElementById("certs");
   box.textContent = "";
   data.certificates.forEach((c, i) => {
-    const card = el("article", "cert");
+    if (!c.shown && !canEdit) return;   // unticked awards stay off the public page
+    const card = el("article", "cert" + (c.shown ? "" : " off"));
     card.append(el("h3", null, c.title));
     if (c.org) card.append(el("p", "org", c.org));
     const href = safeUrl(c.url);
@@ -1990,23 +1996,28 @@ function renderCertificates() {
       card.append(a);
     }
     if (canEdit) {
-      card.append(editTools(data.certificates, i, () =>
+      const tools = editTools(data.certificates, i, () =>
         openForm("Edit award or certificate", certFields(), c, v => {
-          data.certificates[i] = { title: v.title.trim(), org: v.org.trim(), url: v.url.trim() };
+          data.certificates[i] = { title: v.title.trim(), org: v.org.trim(), url: v.url.trim(), shown: c.shown };
           save();
-        }), "certificate"));
+        }), "certificate");
+      tools.append(showTick(c, "show-cert-" + i, c.title));
+      card.append(tools);
     }
     box.append(card);
   });
   if (canEdit) {
     box.append(btn("+ Add award or certificate", "add-card", () =>
       openForm("Add award or certificate", certFields(), { title: "", org: "", url: "" }, v => {
-        data.certificates.push({ title: v.title.trim(), org: v.org.trim(), url: v.url.trim() });
+        data.certificates.push({ title: v.title.trim(), org: v.org.trim(), url: v.url.trim(), shown: true });
         save();
       })));
   }
-  // hide the whole section for visitors when there are no certificates
-  document.getElementById("certificates").hidden = !data.certificates.length && !canEdit;
+  // hide the whole section (and its nav link) for visitors when nothing is shown
+  const none = !data.certificates.some(c => c.shown) && !canEdit;
+  document.getElementById("certificates").hidden = none;
+  const link = document.querySelector('.nav a[href="#certificates"]');
+  if (link) link.hidden = none;
 }
 
 // ---------- stack ----------
