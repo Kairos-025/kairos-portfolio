@@ -482,6 +482,10 @@ dialog#editor::backdrop { background: rgba(0,0,0,.45); }
 .pp-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .pp-video, .pp-hero-img { margin-top: 36px; width: 100%; border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden; background: #000; }
 .pp-video { aspect-ratio: 16 / 9; }
+.pp-embed-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 40px; }
+.pp-embed-bar .pp-h { margin: 0; }
+.pp-embed { margin-top: 16px; width: 100%; height: min(85vh, 900px); border-radius: var(--radius); border: 1px solid var(--line); overflow: hidden; background: #fff; }
+.pp-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
 .pp-video iframe, .pp-video video { width: 100%; height: 100%; border: 0; display: block; }
 .pp-hero-img { display: block; aspect-ratio: 16 / 9; object-fit: cover; }
 .pp-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 40px; margin-top: 40px; align-items: start; }
@@ -1270,6 +1274,7 @@ function normalize(d) {
       cover: str(p.cover),
       gallery: arr(p.gallery).map(g => ({ src: str(g.src), caption: str(g.caption) })).filter(g => g.src),
       video: str(p.video),
+      embed: str(p.embed),
       details: str(p.details),
       links: arr(p.links).map(l => ({ label: str(l.label), url: str(l.url) })).filter(l => l.url)
     })),
@@ -1572,6 +1577,7 @@ function projectFields() {
     { name: "gallery", label: "Gallery images", type: "textarea", rows: 4,
       hint: "One per line, as image | caption, e.g. images/fraud-dashboard.png | Flagged transactions view" },
     { name: "video", label: "Video", hint: "A YouTube or Vimeo link (unlisted is fine), or a path like images/demo.mp4" },
+    { name: "embed", label: "Live app (embedded)", hint: "A page shown inside the project page that visitors can use, e.g. llm-qa-script/ (a folder in this site) or a full https link that allows embedding." },
     { name: "links", label: "Links and files", type: "textarea", rows: 4,
       hint: "One per line, as label | link, e.g. Code | https://github.com/Kairos-025/repo  or  Report (PDF) | files/report.pdf" }
   ];
@@ -1582,7 +1588,7 @@ function projectToForm(p) {
     bullets: p.bullets.join("\n"),
     metrics: p.metrics.map(m => m.value + " | " + m.label).join("\n"),
     stack: p.stack.join(", "),
-    cover: p.cover || "", details: p.details || "", video: p.video || "",
+    cover: p.cover || "", details: p.details || "", video: p.video || "", embed: p.embed || "",
     gallery: (p.gallery || []).map(g => g.src + (g.caption ? " | " + g.caption : "")).join("\n"),
     links: (p.links || []).map(l => l.label + " | " + l.url).join("\n")
   };
@@ -1599,6 +1605,7 @@ function formToProject(v) {
     cover: (v.cover || "").trim(),
     details: (v.details || "").trim(),
     video: (v.video || "").trim(),
+    embed: (v.embed || "").trim(),
     gallery: lines(v.gallery || "").map(l => {
       const [src, ...rest] = l.split("|");
       return { src: src.trim(), caption: rest.join("|").trim() };
@@ -1670,7 +1677,7 @@ function renderProjects() {
     box.append(btn("+ Add project", "add-card", () =>
       openForm("Add project", projectFields(), projectToForm(formToProject({
         title: "", label: "", date: "", cats: [], wide: false, summary: "", bullets: "", metrics: "", stack: "",
-        cover: "", details: "", gallery: "", video: "", links: ""
+        cover: "", details: "", gallery: "", video: "", embed: "", links: ""
       })), v => { data.projects.unshift(formToProject(v)); save(); })));
   }
   applyFilter(currentFilter);
@@ -1686,7 +1693,7 @@ function safeUrl(u) {
   return u;
 }
 function hasPage(p) {
-  return Boolean(p.details || p.gallery.length || p.video || p.links.length || p.cover);
+  return Boolean(p.details || p.gallery.length || p.video || p.embed || p.links.length || p.cover);
 }
 function videoEmbed(url) {
   url = safeUrl(url);
@@ -1822,6 +1829,20 @@ function renderProjectPage() {
   }
   body.append(main, side);
   page.append(body);
+
+  const app = safeUrl(p.embed);
+  if (app) {
+    const bar = el("div", "pp-embed-bar");
+    const open = el("a", "btn", "Open full screen ↗");
+    open.href = app; open.target = "_blank"; open.rel = "noopener";
+    bar.append(el("h2", "pp-h", "Try it"), open);
+    const frame = el("div", "pp-embed");
+    const f = el("iframe");
+    f.src = app; f.title = p.title + " (live app)"; f.loading = "lazy";
+    f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-forms");
+    frame.append(f);
+    page.append(bar, frame);
+  }
 
   if (p.gallery.length) {
     page.append(el("h2", "pp-h", "Gallery"));
