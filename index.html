@@ -211,6 +211,7 @@ h2 {
   padding: 7px 13px; border-radius: 999px; cursor: pointer;
   border: 1px solid var(--line); background: var(--surface); color: var(--fg);
 }
+.filter.filter-off { opacity: .4; text-decoration: line-through; }
 .filter[aria-pressed="true"] { background: var(--invert-bg); color: var(--invert-fg); border-color: var(--invert-bg); }
 
 /* projects */
@@ -2258,9 +2259,13 @@ function categoryKey(label) {
 function renderFilters() {
   const box = document.getElementById("filters");
   box.textContent = "";
-  const all = [{ key: "all", label: "All" }, ...data.categories];
+  // a filter only shows for visitors if at least one ticked (shown) project uses it
+  const live = c => data.projects.some(p => p.shown && p.cats.includes(c.key));
+  const cats = canEdit ? data.categories : data.categories.filter(live);
+  const all = cats.length || canEdit ? [{ key: "all", label: "All" }, ...cats] : [];
   all.forEach(c => {
-    const b = el("button", "filter", c.label);
+    const b = el("button", "filter" + (canEdit && c.key !== "all" && !live(c) ? " filter-off" : ""), c.label);
+    if (canEdit && c.key !== "all" && !live(c)) b.title = "Hidden from visitors: no shown projects use this filter";
     b.type = "button";
     b.dataset.filter = c.key;
     b.addEventListener("click", () => applyFilter(c.key));
@@ -2294,7 +2299,7 @@ function renderFilters() {
   }
 }
 function applyFilter(f) {
-  if (f !== "all" && !data.categories.some(c => c.key === f)) f = "all";
+  if (f !== "all" && !data.categories.some(c => c.key === f && (canEdit || data.projects.some(p => p.shown && p.cats.includes(f))))) f = "all";
   currentFilter = f;
   document.querySelectorAll(".filter").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.filter === f)));
   document.querySelectorAll("#projects .project").forEach(c => {
