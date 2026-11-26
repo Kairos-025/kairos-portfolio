@@ -73,7 +73,11 @@ body::before {
   font-family: var(--font-display); font-weight: 700; font-size: 15px;
   text-decoration: none; letter-spacing: -0.01em;
 }
-.nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.nav { display: flex; gap: 18px; flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.nav::-webkit-scrollbar { display: none; }
+.nav a { flex: none; padding-block: 4px; }
+.nav.more { -webkit-mask-image: linear-gradient(to right, #000 80%, transparent); mask-image: linear-gradient(to right, #000 80%, transparent); }
+.mark { flex: none; }
 .nav a {
   font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
   text-decoration: none; letter-spacing: 0.02em;
@@ -377,7 +381,8 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
   .role { grid-template-columns: minmax(0, 1fr); gap: 6px; }
 }
 @media (max-width: 520px) {
-  .nav { display: none; }
+  .nav { gap: 14px; }
+  .nav a { font-size: 12px; }
   .skills { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -446,6 +451,16 @@ footer .wrap { padding-block: 22px; display: flex; justify-content: space-betwee
   padding: 7px 8px; box-shadow: 0 8px 30px rgba(0,0,0,.12);
 }
 .edit-bar code { font-family: var(--font-mono); overflow-wrap: anywhere; }
+/* the edit bar is a second row of the sticky header: it stays visible while scrolling and never covers content */
+.topbar .edit-bar {
+  position: static; max-width: var(--wrap); margin: 0 auto; box-shadow: none; background: transparent;
+  border: 0; border-top: 1px dashed var(--line); border-radius: 0;
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+}
+.topbar .edit-bar::-webkit-scrollbar { display: none; }
+.topbar .edit-bar > * { flex: none; }
+.topbar .edit-bar .edit-dot { margin-left: 0; }
 .edit-dot { width: 8px; height: 8px; border-radius: 50%; background: #2e9e5b; margin-left: 10px; }
 .toast {
   position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30;
@@ -539,6 +554,7 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
       <a href="#contact">contact</a>
     </nav>
   </div>
+  <div id="edit-bar" class="edit-bar" hidden></div>
 </header>
 
 <main id="top">
@@ -704,7 +720,6 @@ ul.text-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
     </div>
   </form>
 </dialog>
-<div id="edit-bar" class="edit-bar" hidden></div>
 <input type="file" id="restore-file" accept="application/json,.json" hidden>
 <input type="file" id="resume-file" accept="application/pdf,.pdf" hidden>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -2652,6 +2667,13 @@ function syncTopbarHeight() {
 }
 syncTopbarHeight();
 window.addEventListener("resize", syncTopbarHeight);
+
+// nav scrolls sideways on small screens; fade the right edge only while more links are hidden
+const navEl = document.querySelector(".nav");
+function navHint() { navEl.classList.toggle("more", navEl.scrollLeft + navEl.clientWidth < navEl.scrollWidth - 2); }
+navEl.addEventListener("scroll", navHint, { passive: true });
+window.addEventListener("resize", navHint);
+navHint();
 
 // ---------- copy email ----------
 document.querySelectorAll(".email-group").forEach(group => {
