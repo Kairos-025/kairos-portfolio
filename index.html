@@ -215,6 +215,11 @@ h2 {
 
 /* projects */
 .projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.show-tick { margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 11px; padding: 4px 10px 4px 6px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.show-tick input { margin: 0; width: 14px; height: 14px; accent-color: var(--fg); cursor: pointer; }
+.project.off > :not(.edit-tools) { opacity: .4; }
 .project {
   display: flex; flex-direction: column; gap: 14px;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
@@ -1267,6 +1272,7 @@ function normalize(d) {
     projects: arr(d.projects).map(p => ({
       title: str(p.title), label: str(p.label), date: str(p.date),
       cats: arr(p.cats).map(str).filter(Boolean), wide: Boolean(p.wide),
+      shown: p.shown !== false,   // ticked = visitors can see it
       summary: str(p.summary), bullets: arr(p.bullets).map(str).filter(Boolean),
       metrics: arr(p.metrics).map(m => ({ value: str(m.value), label: str(m.label) })).filter(m => m.value || m.label),
       stack: arr(p.stack).map(str).filter(Boolean),
@@ -1633,7 +1639,9 @@ function renderProjects() {
   const box = document.getElementById("projects");
   box.textContent = "";
   data.projects.forEach((p, i) => {
-    const a = el("article", "project" + (p.wide ? " wide" : ""));
+    if (!p.shown && !canEdit) return;   // unticked projects stay off the public page
+    const a = el("article", "project" + (p.wide ? " wide" : "") + (p.shown ? "" : " off"));
+
     a.dataset.cats = p.cats.join(" ");
     const cover = coverMedia(p, "card");
     if (cover) a.append(cover);
@@ -1666,10 +1674,18 @@ function renderProjects() {
       a.append(view);
     }
     if (canEdit) {
-      a.append(editTools(data.projects, i, () =>
+      const tools = editTools(data.projects, i, () =>
         openForm("Edit project", projectFields(), projectToForm(p), v => {
-          data.projects[i] = { ...formToProject(v), id: p.id }; save();
-        }), "project"));
+          data.projects[i] = { ...formToProject(v), id: p.id, shown: p.shown }; save();
+        }), "project");
+      const tick = el("label", "show-tick");
+      const cb = el("input");
+      cb.type = "checkbox"; cb.checked = p.shown; cb.id = "show-" + p.id;
+      cb.setAttribute("aria-label", "Show " + p.title + " to visitors");
+      cb.addEventListener("change", () => { p.shown = cb.checked; save(); });
+      tick.append(cb, el("span", null, p.shown ? "Shown" : "Hidden"));
+      tools.append(tick);
+      a.append(tools);
     }
     box.append(a);
   });
@@ -1753,7 +1769,7 @@ function renderProjectPage() {
   const page = document.getElementById("project-page");
   if (!id) return;
   page.textContent = "";
-  const i = data.projects.findIndex(p => p.id === id);
+  const i = data.projects.findIndex(p => p.id === id && (p.shown || canEdit));
   const back = el("a", "back", "← back to work");
   back.href = "#work";
   page.append(back);
@@ -2105,13 +2121,13 @@ function renderFacts() {
   box.textContent = "";
   data.facts.forEach(f => {
     const d = el("div", "fact");
-    d.append(el("b", null, f.value.toLowerCase() === "auto" ? String(data.projects.length) : f.value), el("span", null, f.label));
+    d.append(el("b", null, f.value.toLowerCase() === "auto" ? String(data.projects.filter(p => p.shown).length) : f.value), el("span", null, f.label));
     box.append(d);
   });
   slotButton("slot-facts", "Edit numbers", () =>
     openForm("Edit numbers", [
       { name: "facts", label: "Numbers", type: "textarea", rows: 5,
-        hint: "One per line, as number | label. Write auto as the number to count your projects automatically." }
+        hint: "One per line, as number | label. Write auto as the number to count your projects automatically (only the ticked, shown ones)." }
     ], { facts: pairsToText(data.facts, "value", "label") }, v => { data.facts = textToPairs(v.facts, "value", "label"); save(); }));
 }
 function renderNow() {
